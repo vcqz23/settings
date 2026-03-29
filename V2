@@ -1,0 +1,1023 @@
+-- Octernal V2 - Complete Rewrite
+-- Advanced Combat & Visual System
+
+--[[
+    Features:
+    - Advanced ESP (Box, Name, Health, Distance, Skeleton, Tracers, Health Bar, Chams)
+    - Improved Aimbot (Better prediction, smoothing, FOV)
+    - Fixed Silent Aim (No camera freeze)
+    - Velocity Manipulation (Position, CFrame, AssemblyLinearVelocity)
+    - Custom Fonts & Beautiful UI
+]]
+
+-- Services
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+local Workspace = game:GetService("Workspace")
+local Camera = Workspace.CurrentCamera
+local LocalPlayer = Players.LocalPlayer
+
+-- Settings
+local Settings = {
+    -- ESP Settings
+    ESP = {
+        Enabled = false,
+        Box = {
+            Enabled = false,
+            Color = Color3.fromRGB(255, 255, 255),
+            Thickness = 2,
+            Filled = false,
+            FilledTransparency = 0.3
+        },
+        Name = {
+            Enabled = false,
+            Color = Color3.fromRGB(255, 255, 255),
+            Size = 14,
+            Font = 2,
+            Outline = true
+        },
+        Health = {
+            Enabled = false,
+            Color = Color3.fromRGB(0, 255, 0),
+            Size = 12,
+            Font = 2,
+            ShowText = true,
+            ShowBar = false,
+            BarWidth = 3
+        },
+        Distance = {
+            Enabled = false,
+            Color = Color3.fromRGB(255, 255, 255),
+            Size = 12,
+            Font = 2,
+            ShowMeters = true
+        },
+        Skeleton = {
+            Enabled = false,
+            Color = Color3.fromRGB(255, 255, 255),
+            Thickness = 1
+        },
+        Tracers = {
+            Enabled = false,
+            Color = Color3.fromRGB(255, 255, 255),
+            Thickness = 1,
+            From = "Bottom"
+        },
+        Chams = {
+            Enabled = false,
+            FillColor = Color3.fromRGB(255, 0, 0),
+            OutlineColor = Color3.fromRGB(255, 255, 255),
+            FillTransparency = 0.5,
+            OutlineTransparency = 0
+        },
+        TeamCheck = false,
+        TeamColor = false,
+        VisibleOnly = false,
+        MaxDistance = 1000
+    },
+    
+    -- Aimbot Settings
+    Aimbot = {
+        Enabled = false,
+        TargetPart = "Head",
+        FOV = {
+            Enabled = true,
+            Radius = 130,
+            Visible = true,
+            Filled = false,
+            Color = Color3.fromRGB(255, 255, 255),
+            Transparency = 1
+        },
+        Smoothing = {
+            Enabled = true,
+            Amount = 0.15
+        },
+        Prediction = {
+            Enabled = true,
+            Amount = 0.13,
+            AutoAdjust = false
+        },
+        StickyAim = {
+            Enabled = false,
+            Strength = 0.5
+        },
+        Checks = {
+            TeamCheck = false,
+            VisibleCheck = false,
+            AliveCheck = true,
+            ForceFieldCheck = true
+        },
+        KeyMode = "Toggle",
+        Key = Enum.UserInputType.MouseButton2,
+        IsActive = false
+    },
+    
+    -- Silent Aim Settings
+    SilentAim = {
+        Enabled = false,
+        TargetPart = "HumanoidRootPart",
+        HitChance = 100,
+        FOV = {
+            Radius = 130,
+            Visible = false
+        },
+        Prediction = {
+            Enabled = true,
+            Amount = 0.13
+        },
+        Checks = {
+            TeamCheck = false,
+            VisibleCheck = false,
+            AliveCheck = true
+        },
+        IgnoreList = {}
+    },
+    
+    -- Velocity Settings
+    Velocity = {
+        Enabled = false,
+        Method = "AssemblyLinearVelocity",
+        Amount = {
+            X = 0,
+            Y = 0,
+            Z = 0
+        },
+        OnlyY = false,
+        CustomAmount = 100
+    },
+    
+    -- Flight Settings
+    Flight = {
+        Enabled = false,
+        Speed = 50,
+        VerticalSpeed = 50
+    },
+    
+    -- Speed Settings
+    Speed = {
+        Enabled = false,
+        Amount = 16,
+        Method = "CFrame"
+    }
+}
+
+-- ESP Data Storage
+local ESPObjects = {}
+
+-- FOV Circle
+local FOVCircle = Drawing.new("Circle")
+FOVCircle.Visible = false
+FOVCircle.Thickness = 2
+FOVCircle.NumSides = 60
+FOVCircle.Radius = 130
+FOVCircle.Filled = false
+FOVCircle.Color = Color3.fromRGB(255, 255, 255)
+FOVCircle.Transparency = 1
+
+-- Utility Functions
+local function GetCharacter(player)
+    return player and player.Character
+end
+
+local function GetRootPart(character)
+    return character and (character:FindFirstChild("HumanoidRootPart") or character:FindFirstChild("Torso"))
+end
+
+local function GetHumanoid(character)
+    return character and character:FindFirstChildOfClass("Humanoid")
+end
+
+local function IsAlive(player)
+    local character = GetCharacter(player)
+    local humanoid = GetHumanoid(character)
+    return humanoid and humanoid.Health > 0
+end
+
+local function HasForceField(character)
+    return character and character:FindFirstChildOfClass("ForceField") ~= nil
+end
+
+local function IsVisible(player)
+    local character = GetCharacter(player)
+    local rootPart = GetRootPart(character)
+    if not rootPart then return false end
+    
+    local origin = Camera.CFrame.Position
+    local direction = (rootPart.Position - origin).Unit * (rootPart.Position - origin).Magnitude
+    
+    local raycastParams = RaycastParams.new()
+    raycastParams.FilterType = Enum.RaycastFilterType.Blacklist
+    raycastParams.FilterDescendantsInstances = {LocalPlayer.Character, Camera}
+    raycastParams.IgnoreWater = true
+    
+    local result = Workspace:Raycast(origin, direction, raycastParams)
+    
+    if result then
+        local hitPart = result.Instance
+        return hitPart:IsDescendantOf(character)
+    end
+    
+    return true
+end
+
+local function GetDistance(player)
+    local character = GetCharacter(player)
+    local rootPart = GetRootPart(character)
+    local localRoot = GetRootPart(LocalPlayer.Character)
+    
+    if rootPart and localRoot then
+        return (rootPart.Position - localRoot.Position).Magnitude
+    end
+    
+    return math.huge
+end
+
+local function WorldToScreen(position)
+    local screenPos, onScreen = Camera:WorldToViewportPoint(position)
+    return Vector2.new(screenPos.X, screenPos.Y), onScreen, screenPos.Z
+end
+
+-- ESP Drawing Functions
+local function CreateDrawing(type, properties)
+    local drawing = Drawing.new(type)
+    for property, value in pairs(properties) do
+        drawing[property] = value
+    end
+    return drawing
+end
+
+local function CreateESP(player)
+    if ESPObjects[player] then return end
+    
+    local esp = {
+        Box = {
+            TopLeft = CreateDrawing("Line", {Visible = false, Thickness = 2, Color = Color3.new(1, 1, 1)}),
+            TopRight = CreateDrawing("Line", {Visible = false, Thickness = 2, Color = Color3.new(1, 1, 1)}),
+            BottomLeft = CreateDrawing("Line", {Visible = false, Thickness = 2, Color = Color3.new(1, 1, 1)}),
+            BottomRight = CreateDrawing("Line", {Visible = false, Thickness = 2, Color = Color3.new(1, 1, 1)}),
+            LeftSide = CreateDrawing("Line", {Visible = false, Thickness = 2, Color = Color3.new(1, 1, 1)}),
+            RightSide = CreateDrawing("Line", {Visible = false, Thickness = 2, Color = Color3.new(1, 1, 1)}),
+            TopSide = CreateDrawing("Line", {Visible = false, Thickness = 2, Color = Color3.new(1, 1, 1)}),
+            BottomSide = CreateDrawing("Line", {Visible = false, Thickness = 2, Color = Color3.new(1, 1, 1)}),
+            Filled = CreateDrawing("Square", {Visible = false, Filled = true, Color = Color3.new(1, 1, 1), Transparency = 0.3})
+        },
+        Name = CreateDrawing("Text", {Visible = false, Center = true, Outline = true, Size = 14, Color = Color3.new(1, 1, 1), Font = 2}),
+        Health = {
+            Text = CreateDrawing("Text", {Visible = false, Center = true, Outline = true, Size = 12, Color = Color3.new(0, 1, 0), Font = 2}),
+            Bar = CreateDrawing("Line", {Visible = false, Thickness = 3, Color = Color3.new(0, 1, 0)}),
+            BarOutline = CreateDrawing("Line", {Visible = false, Thickness = 5, Color = Color3.new(0, 0, 0)})
+        },
+        Distance = CreateDrawing("Text", {Visible = false, Center = true, Outline = true, Size = 12, Color = Color3.new(1, 1, 1), Font = 2}),
+        Tracer = CreateDrawing("Line", {Visible = false, Thickness = 1, Color = Color3.new(1, 1, 1)}),
+        Skeleton = {}
+    }
+    
+    -- Create skeleton lines
+    local skeletonParts = {
+        {"Head", "UpperTorso"},
+        {"UpperTorso", "LowerTorso"},
+        {"UpperTorso", "LeftUpperArm"},
+        {"LeftUpperArm", "LeftLowerArm"},
+        {"LeftLowerArm", "LeftHand"},
+        {"UpperTorso", "RightUpperArm"},
+        {"RightUpperArm", "RightLowerArm"},
+        {"RightLowerArm", "RightHand"},
+        {"LowerTorso", "LeftUpperLeg"},
+        {"LeftUpperLeg", "LeftLowerLeg"},
+        {"LeftLowerLeg", "LeftFoot"},
+        {"LowerTorso", "RightUpperLeg"},
+        {"RightUpperLeg", "RightLowerLeg"},
+        {"RightLowerLeg", "RightFoot"}
+    }
+    
+    for _, connection in ipairs(skeletonParts) do
+        table.insert(esp.Skeleton, CreateDrawing("Line", {Visible = false, Thickness = 1, Color = Color3.new(1, 1, 1)}))
+    end
+    
+    ESPObjects[player] = esp
+end
+
+local function RemoveESP(player)
+    if not ESPObjects[player] then return end
+    
+    local esp = ESPObjects[player]
+    
+    for _, line in pairs(esp.Box) do
+        if typeof(line) == "table" and line.Remove then
+            line:Remove()
+        elseif typeof(line) ~= "table" then
+            line:Remove()
+        end
+    end
+    
+    esp.Name:Remove()
+    esp.Health.Text:Remove()
+    esp.Health.Bar:Remove()
+    esp.Health.BarOutline:Remove()
+    esp.Distance:Remove()
+    esp.Tracer:Remove()
+    
+    for _, line in ipairs(esp.Skeleton) do
+        line:Remove()
+    end
+    
+    ESPObjects[player] = nil
+end
+
+local function UpdateESP(player)
+    if not ESPObjects[player] then return end
+    
+    local esp = ESPObjects[player]
+    local character = GetCharacter(player)
+    local rootPart = GetRootPart(character)
+    local humanoid = GetHumanoid(character)
+    
+    if not character or not rootPart or not humanoid or humanoid.Health <= 0 then
+        for _, line in pairs(esp.Box) do
+            if typeof(line) ~= "table" then
+                line.Visible = false
+            end
+        end
+        esp.Box.Filled.Visible = false
+        esp.Name.Visible = false
+        esp.Health.Text.Visible = false
+        esp.Health.Bar.Visible = false
+        esp.Health.BarOutline.Visible = false
+        esp.Distance.Visible = false
+        esp.Tracer.Visible = false
+        for _, line in ipairs(esp.Skeleton) do
+            line.Visible = false
+        end
+        return
+    end
+    
+    -- Team check
+    if Settings.ESP.TeamCheck and player.Team == LocalPlayer.Team then
+        for _, line in pairs(esp.Box) do
+            if typeof(line) ~= "table" then
+                line.Visible = false
+            end
+        end
+        esp.Box.Filled.Visible = false
+        esp.Name.Visible = false
+        esp.Health.Text.Visible = false
+        esp.Health.Bar.Visible = false
+        esp.Health.BarOutline.Visible = false
+        esp.Distance.Visible = false
+        esp.Tracer.Visible = false
+        for _, line in ipairs(esp.Skeleton) do
+            line.Visible = false
+        end
+        return
+    end
+    
+    -- Visible check
+    if Settings.ESP.VisibleOnly and not IsVisible(player) then
+        for _, line in pairs(esp.Box) do
+            if typeof(line) ~= "table" then
+                line.Visible = false
+            end
+        end
+        esp.Box.Filled.Visible = false
+        esp.Name.Visible = false
+        esp.Health.Text.Visible = false
+        esp.Health.Bar.Visible = false
+        esp.Health.BarOutline.Visible = false
+        esp.Distance.Visible = false
+        esp.Tracer.Visible = false
+        for _, line in ipairs(esp.Skeleton) do
+            line.Visible = false
+        end
+        return
+    end
+    
+    -- Distance check
+    local distance = GetDistance(player)
+    if distance > Settings.ESP.MaxDistance then
+        for _, line in pairs(esp.Box) do
+            if typeof(line) ~= "table" then
+                line.Visible = false
+            end
+        end
+        esp.Box.Filled.Visible = false
+        esp.Name.Visible = false
+        esp.Health.Text.Visible = false
+        esp.Health.Bar.Visible = false
+        esp.Health.BarOutline.Visible = false
+        esp.Distance.Visible = false
+        esp.Tracer.Visible = false
+        for _, line in ipairs(esp.Skeleton) do
+            line.Visible = false
+        end
+        return
+    end
+    
+    -- Get color
+    local color = Settings.ESP.Box.Color
+    if Settings.ESP.TeamColor and player.Team then
+        color = player.Team.TeamColor.Color
+    end
+    
+    -- Calculate box corners
+    local head = character:FindFirstChild("Head")
+    if not head then return end
+    
+    local hrpSize = rootPart.Size
+    local headSize = head.Size
+    
+    local topY = head.Position.Y + (headSize.Y / 2)
+    local bottomY = rootPart.Position.Y - (hrpSize.Y / 2)
+    local height = topY - bottomY
+    
+    local corners = {
+        Vector3.new(rootPart.Position.X + hrpSize.X/2, topY, rootPart.Position.Z + hrpSize.Z/2),
+        Vector3.new(rootPart.Position.X - hrpSize.X/2, topY, rootPart.Position.Z + hrpSize.Z/2),
+        Vector3.new(rootPart.Position.X - hrpSize.X/2, topY, rootPart.Position.Z - hrpSize.Z/2),
+        Vector3.new(rootPart.Position.X + hrpSize.X/2, topY, rootPart.Position.Z - hrpSize.Z/2),
+        Vector3.new(rootPart.Position.X + hrpSize.X/2, bottomY, rootPart.Position.Z + hrpSize.Z/2),
+        Vector3.new(rootPart.Position.X - hrpSize.X/2, bottomY, rootPart.Position.Z + hrpSize.Z/2),
+        Vector3.new(rootPart.Position.X - hrpSize.X/2, bottomY, rootPart.Position.Z - hrpSize.Z/2),
+        Vector3.new(rootPart.Position.X + hrpSize.X/2, bottomY, rootPart.Position.Z - hrpSize.Z/2)
+    }
+    
+    local screenCorners = {}
+    local allOnScreen = true
+    
+    for i, corner in ipairs(corners) do
+        local screenPos, onScreen = WorldToScreen(corner)
+        screenCorners[i] = screenPos
+        if not onScreen then
+            allOnScreen = false
+        end
+    end
+    
+    if not allOnScreen then
+        for _, line in pairs(esp.Box) do
+            if typeof(line) ~= "table" then
+                line.Visible = false
+            end
+        end
+        esp.Box.Filled.Visible = false
+        esp.Name.Visible = false
+        esp.Health.Text.Visible = false
+        esp.Health.Bar.Visible = false
+        esp.Health.BarOutline.Visible = false
+        esp.Distance.Visible = false
+        esp.Tracer.Visible = false
+        for _, line in ipairs(esp.Skeleton) do
+            line.Visible = false
+        end
+        return
+    end
+    
+    -- Find min/max for 2D box
+    local minX, minY = math.huge, math.huge
+    local maxX, maxY = -math.huge, -math.huge
+    
+    for _, pos in ipairs(screenCorners) do
+        minX = math.min(minX, pos.X)
+        minY = math.min(minY, pos.Y)
+        maxX = math.max(maxX, pos.X)
+        maxY = math.max(maxY, pos.Y)
+    end
+    
+    local boxWidth = maxX - minX
+    local boxHeight = maxY - minY
+    
+    -- Update Box
+    if Settings.ESP.Enabled and Settings.ESP.Box.Enabled then
+        local thickness = Settings.ESP.Box.Thickness
+        
+        -- Corner lines
+        local cornerSize = math.min(boxWidth, boxHeight) * 0.25
+        
+        -- Top left
+        esp.Box.TopLeft.From = Vector2.new(minX, minY)
+        esp.Box.TopLeft.To = Vector2.new(minX + cornerSize, minY)
+        esp.Box.TopLeft.Color = color
+        esp.Box.TopLeft.Thickness = thickness
+        esp.Box.TopLeft.Visible = true
+        
+        -- Top right
+        esp.Box.TopRight.From = Vector2.new(maxX, minY)
+        esp.Box.TopRight.To = Vector2.new(maxX - cornerSize, minY)
+        esp.Box.TopRight.Color = color
+        esp.Box.TopRight.Thickness = thickness
+        esp.Box.TopRight.Visible = true
+        
+        -- Bottom left
+        esp.Box.BottomLeft.From = Vector2.new(minX, maxY)
+        esp.Box.BottomLeft.To = Vector2.new(minX + cornerSize, maxY)
+        esp.Box.BottomLeft.Color = color
+        esp.Box.BottomLeft.Thickness = thickness
+        esp.Box.BottomLeft.Visible = true
+        
+        -- Bottom right
+        esp.Box.BottomRight.From = Vector2.new(maxX, maxY)
+        esp.Box.BottomRight.To = Vector2.new(maxX - cornerSize, maxY)
+        esp.Box.BottomRight.Color = color
+        esp.Box.BottomRight.Thickness = thickness
+        esp.Box.BottomRight.Visible = true
+        
+        -- Sides
+        esp.Box.LeftSide.From = Vector2.new(minX, minY)
+        esp.Box.LeftSide.To = Vector2.new(minX, minY + cornerSize)
+        esp.Box.LeftSide.Color = color
+        esp.Box.LeftSide.Thickness = thickness
+        esp.Box.LeftSide.Visible = true
+        
+        esp.Box.RightSide.From = Vector2.new(maxX, minY)
+        esp.Box.RightSide.To = Vector2.new(maxX, minY + cornerSize)
+        esp.Box.RightSide.Color = color
+        esp.Box.RightSide.Thickness = thickness
+        esp.Box.RightSide.Visible = true
+        
+        esp.Box.TopSide.From = Vector2.new(minX, maxY)
+        esp.Box.TopSide.To = Vector2.new(minX, maxY - cornerSize)
+        esp.Box.TopSide.Color = color
+        esp.Box.TopSide.Thickness = thickness
+        esp.Box.TopSide.Visible = true
+        
+        esp.Box.BottomSide.From = Vector2.new(maxX, maxY)
+        esp.Box.BottomSide.To = Vector2.new(maxX, maxY - cornerSize)
+        esp.Box.BottomSide.Color = color
+        esp.Box.BottomSide.Thickness = thickness
+        esp.Box.BottomSide.Visible = true
+        
+        -- Filled box
+        if Settings.ESP.Box.Filled then
+            esp.Box.Filled.Size = Vector2.new(boxWidth, boxHeight)
+            esp.Box.Filled.Position = Vector2.new(minX, minY)
+            esp.Box.Filled.Color = color
+            esp.Box.Filled.Transparency = Settings.ESP.Box.FilledTransparency
+            esp.Box.Filled.Visible = true
+        else
+            esp.Box.Filled.Visible = false
+        end
+    else
+        for _, line in pairs(esp.Box) do
+            if typeof(line) ~= "table" then
+                line.Visible = false
+            end
+        end
+        esp.Box.Filled.Visible = false
+    end
+    
+    -- Update Name
+    if Settings.ESP.Enabled and Settings.ESP.Name.Enabled then
+        esp.Name.Text = player.Name
+        esp.Name.Position = Vector2.new(minX + boxWidth/2, minY - 18)
+        esp.Name.Color = Settings.ESP.Name.Color
+        esp.Name.Size = Settings.ESP.Name.Size
+        esp.Name.Font = Settings.ESP.Name.Font
+        esp.Name.Outline = Settings.ESP.Name.Outline
+        esp.Name.Visible = true
+    else
+        esp.Name.Visible = false
+    end
+    
+    -- Update Health
+    if Settings.ESP.Enabled and Settings.ESP.Health.Enabled then
+        local healthPercent = humanoid.Health / humanoid.MaxHealth
+        local healthColor = Color3.new(1 - healthPercent, healthPercent, 0)
+        
+        if Settings.ESP.Health.ShowText then
+            esp.Health.Text.Text = math.floor(humanoid.Health) .. " HP"
+            esp.Health.Text.Position = Vector2.new(minX + boxWidth/2, minY - 4)
+            esp.Health.Text.Color = healthColor
+            esp.Health.Text.Size = Settings.ESP.Health.Size
+            esp.Health.Text.Font = Settings.ESP.Health.Font
+            esp.Health.Text.Visible = true
+        else
+            esp.Health.Text.Visible = false
+        end
+        
+        if Settings.ESP.Health.ShowBar then
+            local barHeight = boxHeight * healthPercent
+            esp.Health.BarOutline.From = Vector2.new(minX - 6, minY)
+            esp.Health.BarOutline.To = Vector2.new(minX - 6, maxY)
+            esp.Health.BarOutline.Thickness = Settings.ESP.Health.BarWidth + 2
+            esp.Health.BarOutline.Color = Color3.new(0, 0, 0)
+            esp.Health.BarOutline.Visible = true
+            
+            esp.Health.Bar.From = Vector2.new(minX - 6, maxY)
+            esp.Health.Bar.To = Vector2.new(minX - 6, maxY - barHeight)
+            esp.Health.Bar.Thickness = Settings.ESP.Health.BarWidth
+            esp.Health.Bar.Color = healthColor
+            esp.Health.Bar.Visible = true
+        else
+            esp.Health.Bar.Visible = false
+            esp.Health.BarOutline.Visible = false
+        end
+    else
+        esp.Health.Text.Visible = false
+        esp.Health.Bar.Visible = false
+        esp.Health.BarOutline.Visible = false
+    end
+    
+    -- Update Distance
+    if Settings.ESP.Enabled and Settings.ESP.Distance.Enabled then
+        local distText = math.floor(distance)
+        if Settings.ESP.Distance.ShowMeters then
+            distText = distText .. "m"
+        end
+        esp.Distance.Text = distText
+        esp.Distance.Position = Vector2.new(minX + boxWidth/2, maxY + 4)
+        esp.Distance.Color = Settings.ESP.Distance.Color
+        esp.Distance.Size = Settings.ESP.Distance.Size
+        esp.Distance.Font = Settings.ESP.Distance.Font
+        esp.Distance.Visible = true
+    else
+        esp.Distance.Visible = false
+    end
+    
+    -- Update Tracer
+    if Settings.ESP.Enabled and Settings.ESP.Tracers.Enabled then
+        local fromPos
+        if Settings.ESP.Tracers.From == "Bottom" then
+            fromPos = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y)
+        elseif Settings.ESP.Tracers.From == "Center" then
+            fromPos = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
+        else
+            fromPos = Vector2.new(Camera.ViewportSize.X / 2, 0)
+        end
+        
+        esp.Tracer.From = fromPos
+        esp.Tracer.To = Vector2.new(minX + boxWidth/2, maxY)
+        esp.Tracer.Color = color
+        esp.Tracer.Thickness = Settings.ESP.Tracers.Thickness
+        esp.Tracer.Visible = true
+    else
+        esp.Tracer.Visible = false
+    end
+    
+    -- Update Skeleton
+    if Settings.ESP.Enabled and Settings.ESP.Skeleton.Enabled then
+        local skeletonParts = {
+            {"Head", "UpperTorso"},
+            {"UpperTorso", "LowerTorso"},
+            {"UpperTorso", "LeftUpperArm"},
+            {"LeftUpperArm", "LeftLowerArm"},
+            {"LeftLowerArm", "LeftHand"},
+            {"UpperTorso", "RightUpperArm"},
+            {"RightUpperArm", "RightLowerArm"},
+            {"RightLowerArm", "RightHand"},
+            {"LowerTorso", "LeftUpperLeg"},
+            {"LeftUpperLeg", "LeftLowerLeg"},
+            {"LeftLowerLeg", "LeftFoot"},
+            {"LowerTorso", "RightUpperLeg"},
+            {"RightUpperLeg", "RightLowerLeg"},
+            {"RightLowerLeg", "RightFoot"}
+        }
+        
+        for i, connection in ipairs(skeletonParts) do
+            local part1 = character:FindFirstChild(connection[1])
+            local part2 = character:FindFirstChild(connection[2])
+            
+            if part1 and part2 and esp.Skeleton[i] then
+                local pos1, onScreen1 = WorldToScreen(part1.Position)
+                local pos2, onScreen2 = WorldToScreen(part2.Position)
+                
+                if onScreen1 and onScreen2 then
+                    esp.Skeleton[i].From = pos1
+                    esp.Skeleton[i].To = pos2
+                    esp.Skeleton[i].Color = Settings.ESP.Skeleton.Color
+                    esp.Skeleton[i].Thickness = Settings.ESP.Skeleton.Thickness
+                    esp.Skeleton[i].Visible = true
+                else
+                    esp.Skeleton[i].Visible = false
+                end
+            elseif esp.Skeleton[i] then
+                esp.Skeleton[i].Visible = false
+            end
+        end
+    else
+        for _, line in ipairs(esp.Skeleton) do
+            line.Visible = false
+        end
+    end
+end
+
+-- Aimbot Functions
+local function GetClosestPlayerToMouse()
+    local closestPlayer = nil
+    local shortestDistance = Settings.Aimbot.FOV.Radius
+    
+    for _, player in ipairs(Players:GetPlayers()) do
+        if player == LocalPlayer then continue end
+        
+        if Settings.Aimbot.Checks.TeamCheck and player.Team == LocalPlayer.Team then continue end
+        
+        local character = GetCharacter(player)
+        if not character then continue end
+        
+        if Settings.Aimbot.Checks.AliveCheck and not IsAlive(player) then continue end
+        
+        if Settings.Aimbot.Checks.ForceFieldCheck and HasForceField(character) then continue end
+        
+        if Settings.Aimbot.Checks.VisibleCheck and not IsVisible(player) then continue end
+        
+        local targetPart = character:FindFirstChild(Settings.Aimbot.TargetPart)
+        if not targetPart then continue end
+        
+        local screenPos, onScreen = WorldToScreen(targetPart.Position)
+        if not onScreen then continue end
+        
+        local mousePos = UserInputService:GetMouseLocation()
+        local distance = (screenPos - mousePos).Magnitude
+        
+        if distance < shortestDistance then
+            shortestDistance = distance
+            closestPlayer = player
+        end
+    end
+    
+    return closestPlayer
+end
+
+local function GetClosestPlayerForSilentAim()
+    local closestPlayer = nil
+    local shortestDistance = Settings.SilentAim.FOV.Radius
+    
+    for _, player in ipairs(Players:GetPlayers()) do
+        if player == LocalPlayer then continue end
+        
+        if Settings.SilentAim.Checks.TeamCheck and player.Team == LocalPlayer.Team then continue end
+        
+        local character = GetCharacter(player)
+        if not character then continue end
+        
+        if Settings.SilentAim.Checks.AliveCheck and not IsAlive(player) then continue end
+        
+        if Settings.SilentAim.Checks.VisibleCheck and not IsVisible(player) then continue end
+        
+        local targetPart = character:FindFirstChild(Settings.SilentAim.TargetPart)
+        if not targetPart then continue end
+        
+        local screenPos, onScreen = WorldToScreen(targetPart.Position)
+        if not onScreen then continue end
+        
+        local mousePos = UserInputService:GetMouseLocation()
+        local distance = (screenPos - mousePos).Magnitude
+        
+        if distance < shortestDistance then
+            shortestDistance = distance
+            closestPlayer = player
+        end
+    end
+    
+    return closestPlayer
+end
+
+-- Main Loops
+RunService.RenderStepped:Connect(function()
+    -- Update FOV Circle
+    if Settings.Aimbot.FOV.Visible and Settings.Aimbot.Enabled then
+        FOVCircle.Visible = true
+        FOVCircle.Radius = Settings.Aimbot.FOV.Radius
+        FOVCircle.Position = UserInputService:GetMouseLocation()
+        FOVCircle.Color = Settings.Aimbot.FOV.Color
+        FOVCircle.Transparency = Settings.Aimbot.FOV.Transparency
+        FOVCircle.Filled = Settings.Aimbot.FOV.Filled
+    else
+        FOVCircle.Visible = false
+    end
+    
+    -- Update ESP
+    for _, player in ipairs(Players:GetPlayers()) do
+        if player ~= LocalPlayer then
+            UpdateESP(player)
+        end
+    end
+    
+    -- Aimbot
+    if Settings.Aimbot.Enabled and Settings.Aimbot.IsActive then
+        local targetPlayer = GetClosestPlayerToMouse()
+        if targetPlayer then
+            local character = GetCharacter(targetPlayer)
+            local targetPart = character and character:FindFirstChild(Settings.Aimbot.TargetPart)
+            
+            if targetPart then
+                local targetPos = targetPart.Position
+                
+                -- Apply prediction
+                if Settings.Aimbot.Prediction.Enabled then
+                    local velocity = targetPart.AssemblyLinearVelocity
+                    targetPos = targetPos + (velocity * Settings.Aimbot.Prediction.Amount)
+                end
+                
+                -- Apply smoothing
+                if Settings.Aimbot.Smoothing.Enabled then
+                    local currentCFrame = Camera.CFrame
+                    local targetCFrame = CFrame.new(Camera.CFrame.Position, targetPos)
+                    
+                    if Settings.Aimbot.StickyAim.Enabled then
+                        local currentLook = currentCFrame.LookVector
+                        local targetLook = (targetPos - currentCFrame.Position).Unit
+                        local smoothedLook = currentLook:Lerp(targetLook, Settings.Aimbot.StickyAim.Strength)
+                        Camera.CFrame = CFrame.new(currentCFrame.Position, currentCFrame.Position + smoothedLook)
+                    else
+                        Camera.CFrame = currentCFrame:Lerp(targetCFrame, Settings.Aimbot.Smoothing.Amount)
+                    end
+                else
+                    Camera.CFrame = CFrame.new(Camera.CFrame.Position, targetPos)
+                end
+            end
+        end
+    end
+end)
+
+-- Input Handling
+UserInputService.InputBegan:Connect(function(input, gameProcessed)
+    if gameProcessed then return end
+    
+    if input.UserInputType == Settings.Aimbot.Key and Settings.Aimbot.Enabled then
+        if Settings.Aimbot.KeyMode == "Toggle" then
+            Settings.Aimbot.IsActive = not Settings.Aimbot.IsActive
+        elseif Settings.Aimbot.KeyMode == "Hold" then
+            Settings.Aimbot.IsActive = true
+        end
+    end
+end)
+
+UserInputService.InputEnded:Connect(function(input, gameProcessed)
+    if gameProcessed then return end
+    
+    if input.UserInputType == Settings.Aimbot.Key and Settings.Aimbot.Enabled then
+        if Settings.Aimbot.KeyMode == "Hold" then
+            Settings.Aimbot.IsActive = false
+        end
+    end
+end)
+
+-- Silent Aim Hook (Fixed - No camera freeze)
+local oldNamecall
+oldNamecall = hookmetamethod(game, "__namecall", newcclosure(function(self, ...)
+    local method = getnamecallmethod()
+    local args = {...}
+    
+    if Settings.SilentAim.Enabled and not checkcaller() then
+        if method == "FindPartOnRayWithIgnoreList" or method == "FindPartOnRay" or method == "Raycast" then
+            -- Check hit chance
+            if math.random(1, 100) <= Settings.SilentAim.HitChance then
+                local targetPlayer = GetClosestPlayerForSilentAim()
+                
+                if targetPlayer then
+                    local character = GetCharacter(targetPlayer)
+                    local targetPart = character and character:FindFirstChild(Settings.SilentAim.TargetPart)
+                    
+                    if targetPart then
+                        local targetPos = targetPart.Position
+                        
+                        -- Apply prediction
+                        if Settings.SilentAim.Prediction.Enabled then
+                            local velocity = targetPart.AssemblyLinearVelocity
+                            targetPos = targetPos + (velocity * Settings.SilentAim.Prediction.Amount)
+                        end
+                        
+                        -- Modify ray direction
+                        if method == "Raycast" then
+                            local origin = args[1]
+                            args[2] = (targetPos - origin).Unit * 1000
+                        else
+                            local ray = args[1]
+                            args[1] = Ray.new(ray.Origin, (targetPos - ray.Origin).Unit * 1000)
+                        end
+                    end
+                end
+            end
+        end
+    end
+    
+    return oldNamecall(self, unpack(args))
+end))
+
+-- Player Management
+Players.PlayerAdded:Connect(function(player)
+    CreateESP(player)
+end)
+
+Players.PlayerRemoving:Connect(function(player)
+    RemoveESP(player)
+end)
+
+-- Initialize ESP for existing players
+for _, player in ipairs(Players:GetPlayers()) do
+    if player ~= LocalPlayer then
+        CreateESP(player)
+    end
+end
+
+-- Velocity Manipulation
+RunService.Heartbeat:Connect(function()
+    if not Settings.Velocity.Enabled then return end
+    
+    local character = GetCharacter(LocalPlayer)
+    local rootPart = GetRootPart(character)
+    if not rootPart then return end
+    
+    if Settings.Velocity.Method == "AssemblyLinearVelocity" then
+        if Settings.Velocity.OnlyY then
+            rootPart.AssemblyLinearVelocity = Vector3.new(
+                rootPart.AssemblyLinearVelocity.X,
+                Settings.Velocity.Amount.Y,
+                rootPart.AssemblyLinearVelocity.Z
+            )
+        else
+            rootPart.AssemblyLinearVelocity = Vector3.new(
+                Settings.Velocity.Amount.X,
+                Settings.Velocity.Amount.Y,
+                Settings.Velocity.Amount.Z
+            )
+        end
+    elseif Settings.Velocity.Method == "Velocity" then
+        if Settings.Velocity.OnlyY then
+            rootPart.Velocity = Vector3.new(
+                rootPart.Velocity.X,
+                Settings.Velocity.Amount.Y,
+                rootPart.Velocity.Z
+            )
+        else
+            rootPart.Velocity = Vector3.new(
+                Settings.Velocity.Amount.X,
+                Settings.Velocity.Amount.Y,
+                Settings.Velocity.Amount.Z
+            )
+        end
+    elseif Settings.Velocity.Method == "CFrame" then
+        local moveDirection = Vector3.new(0, 0, 0)
+        
+        if UserInputService:IsKeyDown(Enum.KeyCode.W) then
+            moveDirection = moveDirection + (Camera.CFrame.LookVector * Settings.Velocity.CustomAmount)
+        end
+        if UserInputService:IsKeyDown(Enum.KeyCode.S) then
+            moveDirection = moveDirection - (Camera.CFrame.LookVector * Settings.Velocity.CustomAmount)
+        end
+        if UserInputService:IsKeyDown(Enum.KeyCode.A) then
+            moveDirection = moveDirection - (Camera.CFrame.RightVector * Settings.Velocity.CustomAmount)
+        end
+        if UserInputService:IsKeyDown(Enum.KeyCode.D) then
+            moveDirection = moveDirection + (Camera.CFrame.RightVector * Settings.Velocity.CustomAmount)
+        end
+        
+        if moveDirection.Magnitude > 0 then
+            rootPart.CFrame = rootPart.CFrame + (moveDirection * 0.01)
+        end
+    end
+end)
+
+-- Flight
+RunService.Heartbeat:Connect(function()
+    if not Settings.Flight.Enabled then return end
+    
+    local character = GetCharacter(LocalPlayer)
+    local rootPart = GetRootPart(character)
+    if not rootPart then return end
+    
+    local moveDirection = Vector3.new(0, 0, 0)
+    
+    if UserInputService:IsKeyDown(Enum.KeyCode.W) then
+        moveDirection = moveDirection + (Camera.CFrame.LookVector * Settings.Flight.Speed)
+    end
+    if UserInputService:IsKeyDown(Enum.KeyCode.S) then
+        moveDirection = moveDirection - (Camera.CFrame.LookVector * Settings.Flight.Speed)
+    end
+    if UserInputService:IsKeyDown(Enum.KeyCode.A) then
+        moveDirection = moveDirection - (Camera.CFrame.RightVector * Settings.Flight.Speed)
+    end
+    if UserInputService:IsKeyDown(Enum.KeyCode.D) then
+        moveDirection = moveDirection + (Camera.CFrame.RightVector * Settings.Flight.Speed)
+    end
+    if UserInputService:IsKeyDown(Enum.KeyCode.Space) then
+        moveDirection = moveDirection + Vector3.new(0, Settings.Flight.VerticalSpeed, 0)
+    end
+    if UserInputService:IsKeyDown(Enum.KeyCode.LeftShift) then
+        moveDirection = moveDirection - Vector3.new(0, Settings.Flight.VerticalSpeed, 0)
+    end
+    
+    rootPart.Velocity = moveDirection
+end)
+
+-- Speed
+RunService.Heartbeat:Connect(function()
+    if not Settings.Speed.Enabled then return end
+    
+    local character = GetCharacter(LocalPlayer)
+    local humanoid = GetHumanoid(character)
+    if not humanoid then return end
+    
+    if Settings.Speed.Method == "WalkSpeed" then
+        humanoid.WalkSpeed = Settings.Speed.Amount
+    elseif Settings.Speed.Method == "CFrame" then
+        local rootPart = GetRootPart(character)
+        if not rootPart then return end
+        
+        if humanoid.MoveDirection.Magnitude > 0 then
+            rootPart.CFrame = rootPart.CFrame + (humanoid.MoveDirection * (Settings.Speed.Amount / 16))
+        end
+    end
+end)
+
+print("Octernal V2 - Core loaded successfully!")
+print("Waiting for UI initialization...")
