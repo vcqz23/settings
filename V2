@@ -1960,7 +1960,7 @@ do
             Min = Info.Min;
             Max = Info.Max;
             Rounding = Info.Rounding;
-            MaxSize = 232;
+            MaxSize = 232; -- updated dynamically below
             Type = 'Slider';
             Callback = Info.Callback or function(Value) end;
         };
@@ -2056,6 +2056,15 @@ do
         if type(Info.Tooltip) == 'string' then
             Library:AddToolTip(Info.Tooltip, SliderOuter)
         end
+
+        SliderInner:GetPropertyChangedSignal('AbsoluteSize'):Connect(function()
+            Slider.MaxSize = SliderInner.AbsoluteSize.X
+            Slider:Display()
+        end)
+        task.defer(function()
+            Slider.MaxSize = SliderInner.AbsoluteSize.X
+            Slider:Display()
+        end)
 
         function Slider:UpdateColors()
             Fill.BackgroundColor3 = Library.AccentColor;
