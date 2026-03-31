@@ -2063,32 +2063,23 @@ do
                 Slider:Display()
             end
         end)
-        task.spawn(function()
-            while SliderInner.AbsoluteSize.X == 0 do
-                RenderStepped:Wait()
-            end
-            Slider.MaxSize = SliderInner.AbsoluteSize.X
-            Slider:Display()
-        end)
 
+        function Slider:UpdateColors()
+            Fill.BackgroundColor3 = Library.AccentColor;
+            Fill.BorderColor3 = Library.AccentColorDark;
         end;
 
-        function Funcs:AddSlider(Idx, Info)
-            assert(Info.Default, 'AddSlider: Missing default value.');
-            assert(Info.Text, 'AddSlider: Missing slider text.');
-            assert(Info.Min, 'AddSlider: Missing minimum value.');
-            assert(Info.Max, 'AddSlider: Missing maximum value.');
-            assert(Info.Rounding, 'AddSlider: Missing rounding value.');
+        function Slider:Display()
+            local actualSize = SliderInner.AbsoluteSize.X
+            if actualSize > 0 then Slider.MaxSize = actualSize end
 
-            local Slider = {
-                Value = Info.Default;
-                Min = Info.Min;
-                Max = Info.Max;
-                Rounding = Info.Rounding;
-                MaxSize = 232; -- updated dynamically below
-                Type = 'Slider';
-                Callback = Info.Callback or function(Value) end;
-            };
+            local Suffix = Info.Suffix or '';
+
+            if Info.Compact then
+                DisplayLabel.Text = Info.Text .. ': ' .. Slider.Value .. Suffix
+            elseif Info.HideMax then
+                DisplayLabel.Text = string.format('%s', Slider.Value .. Suffix)
+            else
                 DisplayLabel.Text = string.format('%s/%s', Slider.Value .. Suffix, Slider.Max .. Suffix);
             end
 
@@ -2096,11 +2087,6 @@ do
             Fill.Size = UDim2.new(0, X, 1, 0);
 
             HideBorderRight.Visible = not (X == Slider.MaxSize or X == 0);
-        end;
-
-        function Slider:OnChanged(Func)
-            Slider.Changed = Func;
-            Func(Slider.Value);
         end;
 
         local function Round(Value)
