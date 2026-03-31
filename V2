@@ -848,8 +848,8 @@ do
             HueBox.Text = '#' .. ColorPicker.Value:ToHex()
             RgbBox.Text = table.concat({ math.floor(ColorPicker.Value.R * 255), math.floor(ColorPicker.Value.G * 255), math.floor(ColorPicker.Value.B * 255) }, ', ')
 
-            Library:SafeCallback(ColorPicker.Callback, ColorPicker.Value);
-            Library:SafeCallback(ColorPicker.Changed, ColorPicker.Value);
+            Library:SafeCallback(ColorPicker.Callback, ColorPicker.Value, ColorPicker.Transparency);
+            Library:SafeCallback(ColorPicker.Changed, ColorPicker.Value, ColorPicker.Transparency);
         end;
 
         function ColorPicker:OnChanged(Func)
@@ -2058,27 +2058,37 @@ do
         end
 
         SliderInner:GetPropertyChangedSignal('AbsoluteSize'):Connect(function()
-            Slider.MaxSize = SliderInner.AbsoluteSize.X
-            Slider:Display()
+            if SliderInner.AbsoluteSize.X > 0 then
+                Slider.MaxSize = SliderInner.AbsoluteSize.X
+                Slider:Display()
+            end
         end)
-        task.defer(function()
+        task.spawn(function()
+            while SliderInner.AbsoluteSize.X == 0 do
+                RenderStepped:Wait()
+            end
             Slider.MaxSize = SliderInner.AbsoluteSize.X
             Slider:Display()
         end)
 
-        function Slider:UpdateColors()
-            Fill.BackgroundColor3 = Library.AccentColor;
-            Fill.BorderColor3 = Library.AccentColorDark;
         end;
 
-        function Slider:Display()
-            local Suffix = Info.Suffix or '';
+        function Funcs:AddSlider(Idx, Info)
+            assert(Info.Default, 'AddSlider: Missing default value.');
+            assert(Info.Text, 'AddSlider: Missing slider text.');
+            assert(Info.Min, 'AddSlider: Missing minimum value.');
+            assert(Info.Max, 'AddSlider: Missing maximum value.');
+            assert(Info.Rounding, 'AddSlider: Missing rounding value.');
 
-            if Info.Compact then
-                DisplayLabel.Text = Info.Text .. ': ' .. Slider.Value .. Suffix
-            elseif Info.HideMax then
-                DisplayLabel.Text = string.format('%s', Slider.Value .. Suffix)
-            else
+            local Slider = {
+                Value = Info.Default;
+                Min = Info.Min;
+                Max = Info.Max;
+                Rounding = Info.Rounding;
+                MaxSize = 232; -- updated dynamically below
+                Type = 'Slider';
+                Callback = Info.Callback or function(Value) end;
+            };
                 DisplayLabel.Text = string.format('%s/%s', Slider.Value .. Suffix, Slider.Max .. Suffix);
             end
 
