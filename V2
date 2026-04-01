@@ -3508,9 +3508,24 @@ function Library:CreateWindow(...)
                         return s;
                     end;
 
-                    local Size = RightSide.Visible
-                        and math.max(SideSize(LeftSide), SideSize(RightSide))
-                        or SideSize(LeftSide);
+                    local Size;
+                    if RightSide.Visible then
+                        local leftH = SideSize(LeftSide);
+                        local rightH = SideSize(RightSide);
+                        Size = math.max(leftH, rightH);
+                        local function stretchFirst(side)
+                            for _, el in next, side:GetChildren() do
+                                if not el:IsA('UIListLayout') and el.Visible then
+                                    el.Size = UDim2.new(1, 0, 0, Size);
+                                    break;
+                                end;
+                            end;
+                        end;
+                        stretchFirst(LeftSide);
+                        stretchFirst(RightSide);
+                    else
+                        Size = SideSize(LeftSide);
+                    end;
 
                     BoxOuter.Size = UDim2.new(1, 0, 0, 20 + Size + 2 + 2 + 8);
                 end;
