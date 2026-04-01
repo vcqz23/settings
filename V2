@@ -3503,6 +3503,26 @@ function Library:CreateWindow(...)
                         return s;
                     end;
 
+                    local function getMain(side)
+                        local best, bestH = nil, 0;
+                        for _, el in next, side:GetChildren() do
+                            if not el:IsA('UIListLayout') and el.Visible and el.Size.Y.Offset > bestH then
+                                best, bestH = el, el.Size.Y.Offset;
+                            end;
+                        end;
+                        return best;
+                    end;
+
+                    if RightSide.Visible then
+                        local lEl = getMain(LeftSide);
+                        local rEl = getMain(RightSide);
+                        if lEl and rEl then
+                            local maxH = math.max(lEl.Size.Y.Offset, rEl.Size.Y.Offset);
+                            lEl.Size = UDim2.new(1, 0, 0, maxH);
+                            rEl.Size = UDim2.new(1, 0, 0, maxH);
+                        end;
+                    end;
+
                     local Size = RightSide.Visible
                         and math.max(SideSize(LeftSide), SideSize(RightSide))
                         or SideSize(LeftSide);
@@ -3741,6 +3761,7 @@ function Library:CreateWindow(...)
                                 end;
                             end;
                             Tb2Outer.Size = UDim2.new(1, 0, 0, 20 + Sz + 2 + 2);
+                            Tab:Resize();
                         end;
 
                         Btn2.InputBegan:Connect(function(Input)
