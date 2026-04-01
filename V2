@@ -3445,12 +3445,14 @@ function Library:CreateWindow(...)
                 Library:Create('UIListLayout', {
                     FillDirection = Enum.FillDirection.Vertical;
                     SortOrder = Enum.SortOrder.LayoutOrder;
+                    Padding = UDim.new(0, 8);
                     Parent = LeftSide;
                 });
 
                 Library:Create('UIListLayout', {
                     FillDirection = Enum.FillDirection.Vertical;
                     SortOrder = Enum.SortOrder.LayoutOrder;
+                    Padding = UDim.new(0, 8);
                     Parent = RightSide;
                 });
 
@@ -3495,11 +3497,14 @@ function Library:CreateWindow(...)
 
                     local function SideSize(side)
                         local s = 0;
+                        local count = 0;
                         for _, el in next, side:GetChildren() do
                             if not el:IsA('UIListLayout') and el.Visible then
                                 s = s + el.Size.Y.Offset;
+                                count = count + 1;
                             end;
                         end;
+                        if count > 1 then s = s + (count - 1) * 8; end;
                         return s;
                     end;
 
@@ -3507,7 +3512,7 @@ function Library:CreateWindow(...)
                         and math.max(SideSize(LeftSide), SideSize(RightSide))
                         or SideSize(LeftSide);
 
-                    BoxOuter.Size = UDim2.new(1, 0, 0, 20 + Size + 2 + 2);
+                    BoxOuter.Size = UDim2.new(1, 0, 0, 20 + Size + 2 + 2 + 8);
                 end;
 
                 Button.InputBegan:Connect(function(Input)
