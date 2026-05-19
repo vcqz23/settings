@@ -3877,6 +3877,7 @@ Items["SubTitle"] = Library:Create("TextLabel", {
             local NewColorpicker, ColorpickerItems = Library:CreateColorpicker({
                 Name = Colorpicker.Name,
                 Default = Colorpicker.Default,
+                Alpha = Colorpicker.Alpha,
                 Items = Items,
                 Flag = Colorpicker.Flag,
                 Callback = Colorpicker.Callback
