@@ -4048,9 +4048,9 @@ Items["SubTitle"] = Library:Create("TextLabel", {
         end
 
         Library.CreateSettingsPage = function(Self)
-            local SettingsPage = Self:Page({Name = "Settings", Icon = "rbxassetid://118813823415057"})
+            local SettingsPage = Self:Page({Name = "Settings"})
 
-            local GeneralSubPage = SettingsPage:SubPage({Name = "General", Description = "Save & load configs", Icon = "rbxassetid://74595432438103"})
+            local GeneralSubPage = SettingsPage:SubPage({Name = "General", Description = "Save & load configs"})
 
             do
                 local ConfigsSection = GeneralSubPage:Section({Name = "Configs", Description = "Save & load configs", Side = 1})
