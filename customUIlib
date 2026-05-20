@@ -4144,14 +4144,36 @@ Items["SubTitle"] = Library:Create("TextLabel", {
             end
 
             do
-                local ThemingSection = GeneralSubPage:Section({Name = "Theming", Description = "Configure your desired theme", Side = 2})
-                
-                for Index, Value in Library.Theme do 
-                    ThemingSection:Colorpicker({Name = Index, Flag = Index, Default = Value, Callback = function(Value)
-                        Library.Theme[Index] = Value
-                        Library:ChangeTheme(Index, Value)
-                    end})
+                local ThemingSection = GeneralSubPage:Section({Name = "Theming", Description = "Single accent recolors the whole UI", Side = 2})
+
+                -- Derive Accent / Accent 2 / Accent 3 / Accent 4 shades from a single base color.
+                -- Ratios were measured against the original orange preset so that picking the same
+                -- base color reproduces the original look, and any other base scales proportionally.
+                local function ApplyAccent(BaseColor)
+                    local h, s, v = Color3.toHSV(BaseColor)
+                    local function clamp01(n) return math.clamp(n, 0, 1) end
+                    local Shades = {
+                        ["Accent"]   = BaseColor,
+                        ["Accent 2"] = Color3.fromHSV(h, clamp01(s * 0.78), clamp01(v * 0.57)),
+                        ["Accent 3"] = Color3.fromHSV(h, clamp01(s * 1.04), clamp01(v * 1.22)),
+                        ["Accent 4"] = Color3.fromHSV(h, clamp01(s * 1.09), clamp01(v * 1.73)),
+                    }
+                    for Index, Shade in pairs(Shades) do
+                        if Library.Theme[Index] ~= nil then
+                            Library.Theme[Index] = Shade
+                            Library:ChangeTheme(Index, Shade)
+                        end
+                    end
                 end
+
+                ThemingSection:Colorpicker({
+                    Name = "Accent color",
+                    Flag = "AccentColor",
+                    Default = Library.Theme["Accent"],
+                    Callback = function(Value)
+                        ApplyAccent(Value)
+                    end
+                })
             end
         end
     end
