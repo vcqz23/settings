@@ -1711,7 +1711,7 @@ local Library = {
             local Window = {
                 Name = Params.Name or Params.name or "Window",
                 SubName = Params.SubName or Params.subname or "",
-                Logo = Params.Logo or Params.logo or "rbxassetid://114856413138528",
+                Logo = Params.Logo or Params.logo or "zxx",
 
                 IsOpen = true,
                 Pages = { },
@@ -1732,7 +1732,7 @@ local Library = {
                     Parent = Library.Holder.Instance,
                     AnchorPoint = Vector2.new(0.5, 0.5),
                     Position = UDim2.new(0.5, 0, 0.5, 0),
-                    Size = UDim2.new(0, 750, 0, 400),
+                    Size = UDim2.new(0, 750, 0, 500),
                     BorderSizePixel = 0,
                     BackgroundColor3 = Color3.fromRGB(17, 18, 22)
                 })
