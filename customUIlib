@@ -1896,7 +1896,8 @@ Items["SubTitle"] = Library:Create("TextLabel", {
                     Position = UDim2.new(0, 50, 0, 80),
                     Size = UDim2.new(1, -100, 0, 36),
                     BorderSizePixel = 0,
-                    BackgroundColor3 = Color3.fromRGB(22, 30, 35)
+                    BackgroundColor3 = Color3.fromRGB(22, 30, 35),
+                    Visible = false
                 })
                 
                 Items["SearchIcon"] = Library:Create("ImageLabel", {
@@ -2081,7 +2082,7 @@ Items["SubTitle"] = Library:Create("TextLabel", {
 
             local Page = {
                 Name = Params.Name or Params.name or "Page",
-                Icon = Params.Icon or Params.icon,
+                Icon = Params.Icon or Params.icon or "rbxassetid://0",
 
                 Window = Self,
                 Pages = { },
@@ -2111,8 +2112,7 @@ Items["SubTitle"] = Library:Create("TextLabel", {
                     Name = "\0",
                     Parent = Items["Inactive"].Instance,
                     ImageColor3 = Library.Theme["Accent"],
-                    Image = Page.Icon or "",
-                    Visible = Page.Icon ~= nil and Page.Icon ~= "",
+                    Image = Page.Icon,
                     BackgroundTransparency = 1,
                     Position = UDim2.new(0, 15, 0, 0),
                     Size = UDim2.new(0, 18, 0, 18),
@@ -2128,7 +2128,7 @@ Items["SubTitle"] = Library:Create("TextLabel", {
                     Text = Page.Name,
                     Size = UDim2.new(0, 0, 0, 15),
                     BackgroundTransparency = 1,
-                    Position = (Page.Icon ~= nil and Page.Icon ~= "") and UDim2.new(0, 48, 0, 0) or UDim2.new(0, 15, 0, 0),
+                    Position = UDim2.new(0, 48, 0, 0),
                     BorderSizePixel = 0,
                     AutomaticSize = Enum.AutomaticSize.X
                 })
@@ -2235,7 +2235,7 @@ Items["SubTitle"] = Library:Create("TextLabel", {
 
             local Page = {
                 Name = Params.Name or Params.name or "Page",
-                Icon = Params.Icon or Params.icon,
+                Icon = Params.Icon or Params.icon or "rbxassetid://0",
                 Description = Params.Description or Params.description or "",
 
                 Window = Self.Window,
@@ -2271,8 +2271,7 @@ Items["SubTitle"] = Library:Create("TextLabel", {
                     Parent = Items["Inactive"].Instance,
                     ImageColor3 = Color3.fromRGB(117, 117, 131),
                     AnchorPoint = Vector2.new(0, 0.5),
-                    Image = Page.Icon or "",
-                    Visible = Page.Icon ~= nil and Page.Icon ~= "",
+                    Image = Page.Icon,
                     BackgroundTransparency = 1,
                     Position = UDim2.new(0, 10, 0.5, 0),
                     Size = UDim2.new(0, 18, 0, 18),
@@ -2291,7 +2290,7 @@ Items["SubTitle"] = Library:Create("TextLabel", {
                     AnchorPoint = Vector2.new(0, 0.5),
                     Size = UDim2.new(0, 0, 0, 15),
                     BackgroundTransparency = 1,
-                    Position = (Page.Icon ~= nil and Page.Icon ~= "") and UDim2.new(0, 38, 0.5, 0) or UDim2.new(0, 10, 0.5, 0),
+                    Position = UDim2.new(0, 38, 0.5, 0),
                     BorderSizePixel = 0,
                     AutomaticSize = Enum.AutomaticSize.X
                 }):AddToTheme({TextColor3 = function()
