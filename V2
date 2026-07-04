@@ -1355,7 +1355,7 @@ getgenv().Library = {
         local Cfg = {
             Title = Data.Title or "Aether.lua";
             SubText = Data.SubText or "Baseplate";
-            Size = Data.Size or UDim2.fromOffset(775, 531);
+            Size = Data.Size or UDim2.fromOffset(775, 600);
             Image = Data.Image or "rbxassetid://95259225424429";
             IsMobile = Data.IsMobile or false;
 
@@ -2659,8 +2659,26 @@ getgenv().Library = {
                     PaddingLeft = UDim.new(0, 2)
                 })
 
-                Library:Create( "UIListLayout", {
+                Items.DropdownScroll = Library:Create( "ScrollingFrame", {
                     Parent = Items.DropdownHolder.Instance;
+                    BackgroundTransparency = 1;
+                    BorderSizePixel = 0;
+                    Size = UDim2.new(1, 0, 0, 0);
+                    AutomaticSize = Enum.AutomaticSize.Y;
+                    AutomaticCanvasSize = Enum.AutomaticSize.Y;
+                    CanvasSize = UDim2.new(0, 0, 0, 0);
+                    ScrollingDirection = Enum.ScrollingDirection.Y;
+                    ScrollBarThickness = 4;
+                    ScrollBarImageColor3 = Themes.Preset.Accent;
+                }):Themify("Accent", "ScrollBarImageColor3")
+
+                Library:Create( "UISizeConstraint", {
+                    Parent = Items.DropdownScroll.Instance;
+                    MaxSize = Vector2.new(math.huge, 200)
+                })
+
+                Library:Create( "UIListLayout", {
+                    Parent = Items.DropdownScroll.Instance;
                     Padding = UDim.new(0, 5);
                     SortOrder = Enum.SortOrder.LayoutOrder
                 })
@@ -2671,7 +2689,7 @@ getgenv().Library = {
             local DropdownItems = {}
 
             DropdownItems.Button = Library:Create( "Frame", {
-                Parent = Items.DropdownHolder.Instance;
+                Parent = Items.DropdownScroll.Instance;
                 BackgroundTransparency = 1;
                 Size = UDim2.new(1, 0, 0, 0);
                 BorderSizePixel = 0;
