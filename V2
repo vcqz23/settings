@@ -90,6 +90,7 @@ getgenv().Library = {
     Notifications = {Notifs = {}};
     Keybinds = {};
     Mods = {};
+    FontInstances = {};
 
     OpenElement = {};
 
@@ -1204,6 +1205,7 @@ getgenv().Library = {
         if Class == "TextLabel" or Class == "TextBox" then
             Instance.FontFace = Font.new("rbxassetid://12187365364", Enum.FontWeight.SemiBold, Enum.FontStyle.Normal)
             Instance.TextSize = 15
+            table.insert(Library.FontInstances, Instance)
         end
 
         Instance.Name = "\0"
@@ -1381,7 +1383,7 @@ getgenv().Library = {
 
             Library:Create( "UIScale", {
                 Parent = Items.Menu.Instance;
-                Scale = 1.0
+                Scale = 0.85
             })
 
             Items.Menu.Instance.Position = UDim2.fromOffset(Items.Menu.Instance.AbsolutePosition.X, Items.Menu.Instance.AbsolutePosition.Y)
@@ -3559,6 +3561,15 @@ getgenv().Library = {
         return setmetatable(Cfg, Library)
     end
 
+    Library.ChangeFont = function(self, NewFont)
+        Themes.Preset.Font = NewFont
+        for _, Instance in Library.FontInstances do
+            if Instance and Instance.Parent then
+                Instance.FontFace = NewFont
+            end
+        end
+    end
+
     Library.InitConfigs = function(self, Window)
         local Tab = Window:AddTab({
             Title = "Settings",
@@ -3624,6 +3635,33 @@ getgenv().Library = {
             writefile(Library.Directory.."/Autoload.txt", "")
             Label.ChangeTet("Current Config: "..readfile(Library.Directory.."/Autoload.txt"))
         end})
+
+        local FontSection = Tab:AddSection({
+            Side = "Left",
+            Title = "Fonts"
+        })
+
+        local FontMap = {
+            ["Default"]     = Font.new("rbxassetid://12187365364", Enum.FontWeight.SemiBold, Enum.FontStyle.Normal),
+            ["Gotham"]      = Font.new("rbxasset://fonts/families/GothamSSm.json", Enum.FontWeight.SemiBold, Enum.FontStyle.Normal),
+            ["Source Sans"] = Font.new("rbxasset://fonts/families/SourceSansPro.json", Enum.FontWeight.Bold, Enum.FontStyle.Normal),
+            ["Roboto"]      = Font.new("rbxasset://fonts/families/Roboto.json", Enum.FontWeight.SemiBold, Enum.FontStyle.Normal),
+            ["Ubuntu"]      = Font.new("rbxasset://fonts/families/Ubuntu.json", Enum.FontWeight.SemiBold, Enum.FontStyle.Normal),
+            ["Nunito"]      = Font.new("rbxasset://fonts/families/Nunito.json", Enum.FontWeight.SemiBold, Enum.FontStyle.Normal),
+            ["Montserrat"]  = Font.new("rbxasset://fonts/families/Montserrat.json", Enum.FontWeight.SemiBold, Enum.FontStyle.Normal),
+        }
+
+        FontSection:AddDropdown({
+            Text = "Font",
+            Flag = "ui_font",
+            Options = {"Default", "Gotham", "Source Sans", "Roboto", "Ubuntu", "Nunito", "Montserrat"},
+            Default = "Default",
+            Callback = function(Value)
+                if FontMap[Value] then
+                    Library:ChangeFont(FontMap[Value])
+                end
+            end
+        })
 
         local Section = Tab:AddSection({
             Side = "Right",
