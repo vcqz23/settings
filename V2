@@ -1381,7 +1381,7 @@ getgenv().Library = {
 
             Library:Create( "UIScale", {
                 Parent = Items.Menu.Instance;
-                Scale = 0.65
+                Scale = 1.0
             })
 
             Items.Menu.Instance.Position = UDim2.fromOffset(Items.Menu.Instance.AbsolutePosition.X, Items.Menu.Instance.AbsolutePosition.Y)
