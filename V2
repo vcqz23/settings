@@ -1355,7 +1355,7 @@ getgenv().Library = {
         local Cfg = {
             Title = Data.Title or "Aether.lua";
             SubText = Data.SubText or "Baseplate";
-            Size = Data.Size or UDim2.fromOffset(775, 600);
+            Size = Data.Size or UDim2.fromOffset(775, 700);
             Image = Data.Image or "rbxassetid://95259225424429";
             IsMobile = Data.IsMobile or false;
 
@@ -2123,6 +2123,7 @@ getgenv().Library = {
 
         local ScalingSize = (self.Items and self.Items[Cfg.Side] and self.Items[Cfg.Side].Instance) and 1 or 0
         local OffsetSize = ScalingSize == 1 and 0 or 200
+        local MaxSectionHeight = Data.MaxHeight or 300
 
         local Items = Cfg.Items; do
             Items.Section = Library:Create( "Frame", {
@@ -2147,21 +2148,36 @@ getgenv().Library = {
                 ZIndex = 2
             }):Themify("Unselected", "TextColor3")
 
-            Items.Elements = Library:Create( "Frame", {
+            Items.Elements = Library:Create( "ScrollingFrame", {
                 Parent = Items.Section.Instance;
                 BackgroundTransparency = 1;
                 Position = UDim2.new(0, 12, 0, 43);
                 Size = UDim2.new(1, -24, 0, 0);
                 BorderSizePixel = 0;
-                AutomaticSize = Enum.AutomaticSize.Y
+                AutomaticSize = Enum.AutomaticSize.Y;
+                AutomaticCanvasSize = Enum.AutomaticSize.Y;
+                CanvasSize = UDim2.new(0, 0, 0, 0);
+                ScrollingDirection = Enum.ScrollingDirection.Y;
+                ScrollBarThickness = 3;
+                ScrollBarImageColor3 = Themes.Preset["Inline"] or Color3.fromRGB(60, 60, 60);
+                ScrollBarImageTransparency = 0.35;
+                ElasticBehavior = Enum.ElasticBehavior.WhenScrollable;
+                Active = true;
+                ClipsDescendants = true;
+            })
+
+            Library:Create( "UISizeConstraint", {
+                Parent = Items.Elements.Instance;
+                MaxSize = Vector2.new(math.huge, MaxSectionHeight);
             })
 
             Library:Create( "UIPadding", {
                 PaddingBottom = UDim.new(0, 8);
+                PaddingRight = UDim.new(0, 4);
                 Parent = Items.Elements.Instance
             })
 
-            Library:Create( "UIListLayout", {
+            Items.Layout = Library:Create( "UIListLayout", {
                 Parent = Items.Elements.Instance;
                 Padding = UDim.new(0, 13);
                 SortOrder = Enum.SortOrder.LayoutOrder
@@ -2257,13 +2273,19 @@ getgenv().Library = {
             Cfg.Collapse(Cfg.Collapsed)
         end)
 
-        Cfg.UpdateSection = function(Instance)
-            task.spawn(function()
-                if not Cfg.Collapsed then
-                    Cfg.CachedSize += Instance.AbsoluteSize.Y + 13
-                    Items.Section:Tween({Size = UDim2.new(ScalingSize, OffsetSize, 0, Cfg.CachedSize + 40)})
-                end
-            end)
+        local function refreshSectionSize()
+            if Cfg.Collapsed then return end
+            local content = Items.Layout.Instance.AbsoluteContentSize.Y + 8 -- + bottom UIPadding
+            Cfg.CachedSize = content
+            local visible = math.min(content, MaxSectionHeight)
+            Items.Section:Tween({Size = UDim2.new(ScalingSize, OffsetSize, 0, visible + 43)})
+        end
+
+        -- Auto-follow content changes (elements added/removed, dropdowns opening, etc.)
+        Items.Layout.Instance:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(refreshSectionSize)
+
+        Cfg.UpdateSection = function(_)
+            task.defer(refreshSectionSize)
         end
 
         return setmetatable(Cfg, Library)
