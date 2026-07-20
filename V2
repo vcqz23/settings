@@ -1948,10 +1948,13 @@ getgenv().Library = {
                 })
 
                 MiscItems.Left = Library:Create( "ScrollingFrame", {
-                    ScrollBarImageColor3 = Color3.fromRGB(0, 0, 0);
+                    ScrollBarImageColor3 = Themes.Preset["Inline"] or Color3.fromRGB(60, 60, 60);
+                    ScrollBarImageTransparency = 0.35;
                     Active = true;
                     AutomaticCanvasSize = Enum.AutomaticSize.Y;
-                    ScrollBarThickness = 0;
+                    ScrollingDirection = Enum.ScrollingDirection.Y;
+                    ScrollingEnabled = true;
+                    ScrollBarThickness = 3;
                     Parent = MiscItems.Page.Instance;
                     BackgroundTransparency = 1;
                     Size = UDim2.new(0, 100, 0, 100);
@@ -1974,10 +1977,13 @@ getgenv().Library = {
                 })
 
                 MiscItems.Right = Library:Create( "ScrollingFrame", {
-                    ScrollBarImageColor3 = Color3.fromRGB(0, 0, 0);
+                    ScrollBarImageColor3 = Themes.Preset["Inline"] or Color3.fromRGB(60, 60, 60);
+                    ScrollBarImageTransparency = 0.35;
                     Active = true;
                     AutomaticCanvasSize = Enum.AutomaticSize.Y;
-                    ScrollBarThickness = 0;
+                    ScrollingDirection = Enum.ScrollingDirection.Y;
+                    ScrollingEnabled = true;
+                    ScrollBarThickness = 3;
                     Parent = MiscItems.Page.Instance;
                     BackgroundTransparency = 1;
                     Size = UDim2.new(0, 100, 0, 100);
@@ -2154,10 +2160,14 @@ getgenv().Library = {
                 Position = UDim2.new(0, 12, 0, 43);
                 Size = UDim2.new(1, -24, 0, 0);
                 BorderSizePixel = 0;
-                AutomaticSize = Enum.AutomaticSize.Y;
+                -- NOTE: do NOT set AutomaticSize here. AutomaticSize.Y + AutomaticCanvasSize.Y
+                -- on the same ScrollingFrame creates a circular dependency that collapses the
+                -- canvas to the window size, clipping overflow content and breaking scrolling.
+                -- The visible height is driven manually by refreshSectionSize() below.
                 AutomaticCanvasSize = Enum.AutomaticSize.Y;
                 CanvasSize = UDim2.new(0, 0, 0, 0);
                 ScrollingDirection = Enum.ScrollingDirection.Y;
+                ScrollingEnabled = true;
                 ScrollBarThickness = 3;
                 ScrollBarImageColor3 = Themes.Preset["Inline"] or Color3.fromRGB(60, 60, 60);
                 ScrollBarImageTransparency = 0.35;
@@ -2253,7 +2263,9 @@ getgenv().Library = {
                 Items.Elements:Tween({Position = UDim2.new(0, 12, 0, 23)})
                 Items.Elements:TweenDescendants(false, Cfg)
             else
-                Items.Section:Tween({Size = UDim2.new(ScalingSize, OffsetSize, 0, Cfg.CachedSize + 36)})
+                local visible = math.min(Cfg.CachedSize, MaxSectionHeight)
+                Items.Elements.Instance.Size = UDim2.new(1, -24, 0, visible)
+                Items.Section:Tween({Size = UDim2.new(ScalingSize, OffsetSize, 0, visible + 43)})
                 Items.Filler1:Tween({BackgroundTransparency = 0})
                 Items.Filler2:Tween({BackgroundTransparency = 0})
                 Items.Image:Tween({Rotation = 0})
@@ -2278,6 +2290,9 @@ getgenv().Library = {
             local content = Items.Layout.Instance.AbsoluteContentSize.Y + 8 -- + bottom UIPadding
             Cfg.CachedSize = content
             local visible = math.min(content, MaxSectionHeight)
+            -- drive the scroll window height manually (AutomaticSize is intentionally off).
+            -- when content exceeds MaxSectionHeight the window caps and the frame scrolls.
+            Items.Elements.Instance.Size = UDim2.new(1, -24, 0, visible)
             Items.Section:Tween({Size = UDim2.new(ScalingSize, OffsetSize, 0, visible + 43)})
         end
 
