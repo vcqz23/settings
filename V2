@@ -117,7 +117,7 @@ getgenv().Library = {
 
     local Themes = {
         Preset = {
-            ["Accent"] = Color3.fromRGB(255, 182, 193),
+            ["Accent"] = Color3.fromRGB(176, 116, 255),
             ["ElementBackground"] = Color3.fromRGB(20, 20, 22),
             ["SectionBackground"] = Color3.fromRGB(15, 16, 18),
             ["ElementOutline"] = Color3.fromRGB(25, 25, 29),
