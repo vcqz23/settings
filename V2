@@ -1359,6 +1359,13 @@ getgenv().Library = {
             Image = Data.Image or "rbxassetid://95259225424429";
             IsMobile = Data.IsMobile or false;
 
+            -- Efeito "wave" de duas cores passando pelo SubTitle.
+            -- Todos edit veis (via config ou pelos m todos Cfg:SetWave...).
+            SubWave = (Data.SubWave ~= false); -- ligado por padr o
+            SubWaveColorA = Data.SubWaveColorA or Color3.fromRGB(96, 125, 245);
+            SubWaveColorB = Data.SubWaveColorB or Color3.fromRGB(200, 120, 255);
+            SubWaveSpeed = Data.SubWaveSpeed or 1; -- ciclos por segundo (aprox.)
+
             Position;
             Size;
             Items = {};
@@ -1536,7 +1543,7 @@ getgenv().Library = {
 
             Items.SubTitleLabel = Library:Create( "TextLabel", {
                 FontFace = Themes.Preset.Font;
-                TextColor3 = Themes.Preset["Unselected"];
+                TextColor3 = Color3.new(1, 1, 1);
                 Text = Cfg.SubText;
                 Parent = Items.Logo.Instance;
                 AnchorPoint = Vector2.new(0, 0.5);
@@ -1545,9 +1552,55 @@ getgenv().Library = {
                 Position = UDim2.new(1, 3, 0.62, 1);
                 BorderSizePixel = 0;
                 ZIndex = 2
-            }):Themify("Unselected", "TextColor3")
+            })
 
             Items.SubTitleLabel.Instance.TextSize = 13
+
+            -- Gradiente de duas cores que "anda" pelo texto (efeito wave).
+            -- TextColor3 fica branco para o gradiente aparecer com as cores reais.
+            Items.SubWaveGradient = Instance.new("UIGradient")
+            Items.SubWaveGradient.Rotation = 0
+            Items.SubWaveGradient.Parent = Items.SubTitleLabel.Instance
+
+            local function BuildWaveSequence()
+                local a, b = Cfg.SubWaveColorA, Cfg.SubWaveColorB
+                Items.SubWaveGradient.Color = ColorSequence.new({
+                    ColorSequenceKeypoint.new(0.00, a),
+                    ColorSequenceKeypoint.new(0.25, b),
+                    ColorSequenceKeypoint.new(0.50, a),
+                    ColorSequenceKeypoint.new(0.75, b),
+                    ColorSequenceKeypoint.new(1.00, a),
+                })
+            end
+            BuildWaveSequence()
+
+            -- Anima o Offset do gradiente ao longo do tempo (loop suave).
+            Library:Connect(Services.RunService.RenderStepped, function()
+                if not Cfg.SubWave then
+                    if Items.SubWaveGradient.Offset ~= Vector2.new(0, 0) then
+                        Items.SubWaveGradient.Offset = Vector2.new(0, 0)
+                    end
+                    return
+                end
+                local t = tick() * (Cfg.SubWaveSpeed or 1)
+                local x = (t % 2) - 1 -- varia de -1 a 1 continuamente
+                Items.SubWaveGradient.Offset = Vector2.new(x, 0)
+            end)
+
+            -- ── API p/ editar o wave em runtime ─────────────────────────
+            function Cfg:SetWaveColors(ColorA, ColorB)
+                if ColorA then Cfg.SubWaveColorA = ColorA end
+                if ColorB then Cfg.SubWaveColorB = ColorB end
+                BuildWaveSequence()
+            end
+
+            function Cfg:SetWaveEnabled(Bool)
+                Cfg.SubWave = Bool and true or false
+            end
+
+            function Cfg:SetWaveSpeed(Speed)
+                Cfg.SubWaveSpeed = tonumber(Speed) or Cfg.SubWaveSpeed
+            end
 
             Items.MobileFrame = Library:Create( "Frame", {
                 Visible = false;
