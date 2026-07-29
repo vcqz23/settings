@@ -1505,18 +1505,21 @@ getgenv().Library = {
                 BorderSizePixel = 0
             })
 
+            -- Logo removido: frame invisível de largura zero serve só de âncora
+            -- para o Title/SubTitle ficarem alinhados à esquerda do topbar.
             Items.Logo = Library:Create( "ImageLabel", {
                 ImageColor3 = Themes.Preset["Accent"];
                 Parent = Items.LogoHolder.Instance;
                 AnchorPoint = Vector2.new(0, 0.5);
-                Image = Cfg.Image;
+                Image = "";
+                ImageTransparency = 1;
                 BackgroundTransparency = 1;
                 Position = UDim2.new(0, 15, 0.5, -5);
-                Size = UDim2.new(0, 45, 0, 46);
+                Size = UDim2.new(0, 0, 0, 46);
                 BorderSizePixel = 0
             }):Themify("Accent", "ImageColor3")
 
-            Library:Create( "TextLabel", {
+            Items.TitleLabel = Library:Create( "TextLabel", {
                 FontFace = Themes.Preset.Font;
                 TextColor3 = Themes.Preset["Accent"];
                 Text = Cfg.Title;
@@ -1524,12 +1527,14 @@ getgenv().Library = {
                 AnchorPoint = Vector2.new(0, 0.5);
                 AutomaticSize = Enum.AutomaticSize.XY;
                 BackgroundTransparency = 1;
-                Position = UDim2.new(1, 10, 0.25, 0);
+                Position = UDim2.new(1, 3, 0.28, 0);
                 BorderSizePixel = 0;
                 ZIndex = 2
             }):Themify("Accent", "TextColor3")
 
-            Library:Create( "TextLabel", {
+            Items.TitleLabel.Instance.TextSize = 19
+
+            Items.SubTitleLabel = Library:Create( "TextLabel", {
                 FontFace = Themes.Preset.Font;
                 TextColor3 = Themes.Preset["Unselected"];
                 Text = Cfg.SubText;
@@ -1537,10 +1542,12 @@ getgenv().Library = {
                 AnchorPoint = Vector2.new(0, 0.5);
                 AutomaticSize = Enum.AutomaticSize.XY;
                 BackgroundTransparency = 1;
-                Position = UDim2.new(1, 10, 0.550000011920929, 1);
+                Position = UDim2.new(1, 3, 0.62, 1);
                 BorderSizePixel = 0;
                 ZIndex = 2
             }):Themify("Unselected", "TextColor3")
+
+            Items.SubTitleLabel.Instance.TextSize = 13
 
             Items.MobileFrame = Library:Create( "Frame", {
                 Visible = false;
@@ -1737,12 +1744,15 @@ getgenv().Library = {
                     BorderSizePixel = 0
                 })
 
+                -- Ícone da tab removido: largura zero, invisível; continua existindo
+                -- só como âncora do Title e alvo dos tweens do OpenPage.
                 Items.Icon = Library:Create( "ImageLabel", {
                     ImageColor3 = Themes.Preset["Unselected"];
                     Parent = Items.Button.Instance;
-                    Size = UDim2.new(0, 21, 0, 21);
+                    Size = UDim2.new(0, 0, 0, 21);
                     AnchorPoint = Vector2.new(0, 0.5);
-                    Image = Cfg.Icon;
+                    Image = "";
+                    ImageTransparency = 1;
                     BackgroundTransparency = 1;
                     Position = UDim2.new(0, 13, 0.5, 0);
                     ZIndex = 2;
