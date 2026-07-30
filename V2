@@ -1359,19 +1359,17 @@ getgenv().Library = {
             Image = Data.Image or "rbxassetid://95259225424429";
             IsMobile = Data.IsMobile or false;
 
-            -- Efeito "wave" de duas cores passando pelo SubTitle.
-            SubWave = (Data.SubWave ~= false);
+            -- Efeito animado no SubTitle. Estilos: "wave" | "rainbow" | "pulse" | "gradient"
             SubWaveColorA = Data.SubWaveColorA or Color3.fromRGB(96, 125, 245);
             SubWaveColorB = Data.SubWaveColorB or Color3.fromRGB(200, 120, 255);
             SubWaveSpeed = Data.SubWaveSpeed or 1;
-            SubWaveStyle = Data.SubWaveStyle or "horizontal"; -- "horizontal" | "diagonal" | "vertical"
+            SubWaveStyle = Data.SubWaveStyle or "wave";
 
-            -- Mesmo efeito wave para o Title principal.
-            TitleWave = (Data.TitleWave ~= false);
+            -- Mesmo sistema de efeito para o Title principal.
             TitleWaveColorA = Data.TitleWaveColorA or Color3.fromRGB(150, 80, 255);
             TitleWaveColorB = Data.TitleWaveColorB or Color3.fromRGB(255, 110, 60);
             TitleWaveSpeed = Data.TitleWaveSpeed or 1;
-            TitleWaveStyle = Data.TitleWaveStyle or "horizontal";
+            TitleWaveStyle = Data.TitleWaveStyle or "wave";
 
             Position;
             Size;
@@ -1550,27 +1548,10 @@ getgenv().Library = {
 
             Items.TitleLabel.Instance.TextSize = 19
 
-            -- Gradiente wave do Title.
+            -- Gradiente animado do Title.
             local TitleGradient = Instance.new("UIGradient")
             TitleGradient.Name = "TitleWaveGradient"
             TitleGradient.Parent = Items.TitleLabel.Instance
-
-            local WaveStyleToRotation = {
-                horizontal = 0,
-                diagonal = 45,
-                vertical = 90,
-            }
-
-            local function BuildTitleWaveSequence()
-                local a, b = Cfg.TitleWaveColorA, Cfg.TitleWaveColorB
-                TitleGradient.Color = ColorSequence.new({
-                    ColorSequenceKeypoint.new(0.00, a),
-                    ColorSequenceKeypoint.new(0.50, b),
-                    ColorSequenceKeypoint.new(1.00, a),
-                })
-                TitleGradient.Rotation = WaveStyleToRotation[Cfg.TitleWaveStyle] or 0
-            end
-            BuildTitleWaveSequence()
 
             Items.SubTitleLabel = Library:Create( "TextLabel", {
                 FontFace = Themes.Preset.Font;
@@ -1588,44 +1569,77 @@ getgenv().Library = {
 
             Items.SubTitleLabel.Instance.TextSize = 13
 
-            -- Gradiente wave do SubTitle.
+            -- Gradiente animado do SubTitle.
             local SubGradient = Instance.new("UIGradient")
             SubGradient.Name = "SubWaveGradient"
             SubGradient.Parent = Items.SubTitleLabel.Instance
 
-            local function BuildSubWaveSequence()
-                local a, b = Cfg.SubWaveColorA, Cfg.SubWaveColorB
-                SubGradient.Color = ColorSequence.new({
-                    ColorSequenceKeypoint.new(0.00, a),
-                    ColorSequenceKeypoint.new(0.50, b),
-                    ColorSequenceKeypoint.new(1.00, a),
-                })
-                SubGradient.Rotation = WaveStyleToRotation[Cfg.SubWaveStyle] or 0
+            -- Sequencia de arco-iris (pre-construida, reutilizada).
+            local RainbowSequence do
+                local kp = {}
+                for i = 0, 6 do
+                    table.insert(kp, ColorSequenceKeypoint.new(i / 6, Color3.fromHSV(i / 6, 0.75, 1)))
+                end
+                RainbowSequence = ColorSequence.new(kp)
             end
+
+            -- Estilos disponiveis (usado pela UI de settings).
+            Cfg.WaveStyles = { "wave", "rainbow", "pulse", "gradient" }
+
+            -- Configura a parte ESTATICA do gradiente conforme o estilo.
+            local function BuildGradient(gradient, colorA, colorB, style)
+                gradient.Rotation = 0
+                gradient.Offset = Vector2.new(0, 0)
+                if style == "rainbow" then
+                    gradient.Color = RainbowSequence
+                elseif style == "gradient" then
+                    gradient.Color = ColorSequence.new({
+                        ColorSequenceKeypoint.new(0, colorA),
+                        ColorSequenceKeypoint.new(1, colorB),
+                    })
+                elseif style == "pulse" then
+                    -- cor definida a cada frame no loop
+                else -- "wave"
+                    gradient.Color = ColorSequence.new({
+                        ColorSequenceKeypoint.new(0.00, colorA),
+                        ColorSequenceKeypoint.new(0.50, colorB),
+                        ColorSequenceKeypoint.new(1.00, colorA),
+                    })
+                end
+            end
+
+            -- Atualiza a parte ANIMADA a cada frame.
+            local function AnimateGradient(gradient, colorA, colorB, style, speed, t)
+                speed = speed or 1
+                if style == "wave" or style == "rainbow" then
+                    gradient.Offset = Vector2.new((t * speed % 2) - 1, 0)
+                elseif style == "pulse" then
+                    local a = (math.sin(t * speed * math.pi) + 1) / 2
+                    gradient.Color = ColorSequence.new(colorA:Lerp(colorB, a))
+                end
+            end
+
+            local function BuildTitleWaveSequence()
+                BuildGradient(TitleGradient, Cfg.TitleWaveColorA, Cfg.TitleWaveColorB, Cfg.TitleWaveStyle)
+            end
+            local function BuildSubWaveSequence()
+                BuildGradient(SubGradient, Cfg.SubWaveColorA, Cfg.SubWaveColorB, Cfg.SubWaveStyle)
+            end
+            BuildTitleWaveSequence()
             BuildSubWaveSequence()
 
-            -- Loop: anima o Offset dos gradientes (Title + SubTitle).
+            -- Loop: anima os gradientes (Title + SubTitle) sempre ativos.
             Library:Connect(Services.RunService.RenderStepped, function()
                 local t = tick()
-                if Cfg.TitleWave then
-                    local tt = t * (Cfg.TitleWaveSpeed or 1)
-                    TitleGradient.Offset = Vector2.new((tt % 2) - 1, 0)
-                end
-                if Cfg.SubWave then
-                    local ts = t * (Cfg.SubWaveSpeed or 1)
-                    SubGradient.Offset = Vector2.new((ts % 2) - 1, 0)
-                end
+                AnimateGradient(TitleGradient, Cfg.TitleWaveColorA, Cfg.TitleWaveColorB, Cfg.TitleWaveStyle, Cfg.TitleWaveSpeed, t)
+                AnimateGradient(SubGradient, Cfg.SubWaveColorA, Cfg.SubWaveColorB, Cfg.SubWaveStyle, Cfg.SubWaveSpeed, t)
             end)
 
-            -- ── API p/ editar os waves em runtime ─────────────────────────
+            -- ── API p/ editar os efeitos em runtime ─────────────────────
             function Cfg:SetWaveColors(ColorA, ColorB)
                 if ColorA then Cfg.SubWaveColorA = ColorA end
                 if ColorB then Cfg.SubWaveColorB = ColorB end
                 BuildSubWaveSequence()
-            end
-
-            function Cfg:SetWaveEnabled(Bool)
-                Cfg.SubWave = Bool and true or false
             end
 
             function Cfg:SetWaveSpeed(Speed)
@@ -1641,10 +1655,6 @@ getgenv().Library = {
                 if ColorA then Cfg.TitleWaveColorA = ColorA end
                 if ColorB then Cfg.TitleWaveColorB = ColorB end
                 BuildTitleWaveSequence()
-            end
-
-            function Cfg:SetTitleWaveEnabled(Bool)
-                Cfg.TitleWave = Bool and true or false
             end
 
             function Cfg:SetTitleWaveSpeed(Speed)
@@ -3863,6 +3873,8 @@ getgenv().Library = {
         end})
 
         ConfigHolder:UpdateConfigList();
+
+        return Tab
     end
 
     do -- Keybind lib
