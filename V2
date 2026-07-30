@@ -1360,11 +1360,18 @@ getgenv().Library = {
             IsMobile = Data.IsMobile or false;
 
             -- Efeito "wave" de duas cores passando pelo SubTitle.
-            -- Todos edit veis (via config ou pelos m todos Cfg:SetWave...).
-            SubWave = (Data.SubWave ~= false); -- ligado por padr o
+            SubWave = (Data.SubWave ~= false);
             SubWaveColorA = Data.SubWaveColorA or Color3.fromRGB(96, 125, 245);
             SubWaveColorB = Data.SubWaveColorB or Color3.fromRGB(200, 120, 255);
-            SubWaveSpeed = Data.SubWaveSpeed or 1; -- ciclos por segundo (aprox.)
+            SubWaveSpeed = Data.SubWaveSpeed or 1;
+            SubWaveStyle = Data.SubWaveStyle or "horizontal"; -- "horizontal" | "diagonal" | "vertical"
+
+            -- Mesmo efeito wave para o Title principal.
+            TitleWave = (Data.TitleWave ~= false);
+            TitleWaveColorA = Data.TitleWaveColorA or Color3.fromRGB(150, 80, 255);
+            TitleWaveColorB = Data.TitleWaveColorB or Color3.fromRGB(255, 110, 60);
+            TitleWaveSpeed = Data.TitleWaveSpeed or 1;
+            TitleWaveStyle = Data.TitleWaveStyle or "horizontal";
 
             Position;
             Size;
@@ -1526,20 +1533,44 @@ getgenv().Library = {
                 BorderSizePixel = 0
             }):Themify("Accent", "ImageColor3")
 
+            -- Title: filho do LogoHolder (largura real) para o UIGradient animar.
             Items.TitleLabel = Library:Create( "TextLabel", {
                 FontFace = Themes.Preset.Font;
-                TextColor3 = Themes.Preset["Accent"];
+                TextColor3 = Color3.fromRGB(255, 255, 255);
                 Text = Cfg.Title;
-                Parent = Items.Logo.Instance;
+                Parent = Items.LogoHolder.Instance;
                 AnchorPoint = Vector2.new(0, 0.5);
                 AutomaticSize = Enum.AutomaticSize.XY;
                 BackgroundTransparency = 1;
-                Position = UDim2.new(1, 3, 0.28, 0);
+                Position = UDim2.new(0, 18, 0.28, 0);
                 BorderSizePixel = 0;
-                ZIndex = 2
-            }):Themify("Accent", "TextColor3")
+                ZIndex = 2;
+                ClipsDescendants = false;
+            })
 
             Items.TitleLabel.Instance.TextSize = 19
+
+            -- Gradiente wave do Title.
+            local TitleGradient = Instance.new("UIGradient")
+            TitleGradient.Name = "TitleWaveGradient"
+            TitleGradient.Parent = Items.TitleLabel.Instance
+
+            local WaveStyleToRotation = {
+                horizontal = 0,
+                diagonal = 45,
+                vertical = 90,
+            }
+
+            local function BuildTitleWaveSequence()
+                local a, b = Cfg.TitleWaveColorA, Cfg.TitleWaveColorB
+                TitleGradient.Color = ColorSequence.new({
+                    ColorSequenceKeypoint.new(0.00, a),
+                    ColorSequenceKeypoint.new(0.50, b),
+                    ColorSequenceKeypoint.new(1.00, a),
+                })
+                TitleGradient.Rotation = WaveStyleToRotation[Cfg.TitleWaveStyle] or 0
+            end
+            BuildTitleWaveSequence()
 
             Items.SubTitleLabel = Library:Create( "TextLabel", {
                 FontFace = Themes.Preset.Font;
@@ -1560,7 +1591,6 @@ getgenv().Library = {
             -- Gradiente wave do SubTitle.
             local SubGradient = Instance.new("UIGradient")
             SubGradient.Name = "SubWaveGradient"
-            SubGradient.Rotation = 0
             SubGradient.Parent = Items.SubTitleLabel.Instance
 
             local function BuildSubWaveSequence()
@@ -1570,18 +1600,24 @@ getgenv().Library = {
                     ColorSequenceKeypoint.new(0.50, b),
                     ColorSequenceKeypoint.new(1.00, a),
                 })
+                SubGradient.Rotation = WaveStyleToRotation[Cfg.SubWaveStyle] or 0
             end
             BuildSubWaveSequence()
 
-            -- Loop: anima o Offset do gradiente do SubTitle.
+            -- Loop: anima o Offset dos gradientes (Title + SubTitle).
             Library:Connect(Services.RunService.RenderStepped, function()
+                local t = tick()
+                if Cfg.TitleWave then
+                    local tt = t * (Cfg.TitleWaveSpeed or 1)
+                    TitleGradient.Offset = Vector2.new((tt % 2) - 1, 0)
+                end
                 if Cfg.SubWave then
-                    local ts = tick() * (Cfg.SubWaveSpeed or 1)
+                    local ts = t * (Cfg.SubWaveSpeed or 1)
                     SubGradient.Offset = Vector2.new((ts % 2) - 1, 0)
                 end
             end)
 
-            -- ── API p/ editar o wave em runtime ─────────────────────────
+            -- ── API p/ editar os waves em runtime ─────────────────────────
             function Cfg:SetWaveColors(ColorA, ColorB)
                 if ColorA then Cfg.SubWaveColorA = ColorA end
                 if ColorB then Cfg.SubWaveColorB = ColorB end
@@ -1594,6 +1630,30 @@ getgenv().Library = {
 
             function Cfg:SetWaveSpeed(Speed)
                 Cfg.SubWaveSpeed = tonumber(Speed) or Cfg.SubWaveSpeed
+            end
+
+            function Cfg:SetWaveStyle(Style)
+                Cfg.SubWaveStyle = tostring(Style)
+                BuildSubWaveSequence()
+            end
+
+            function Cfg:SetTitleWaveColors(ColorA, ColorB)
+                if ColorA then Cfg.TitleWaveColorA = ColorA end
+                if ColorB then Cfg.TitleWaveColorB = ColorB end
+                BuildTitleWaveSequence()
+            end
+
+            function Cfg:SetTitleWaveEnabled(Bool)
+                Cfg.TitleWave = Bool and true or false
+            end
+
+            function Cfg:SetTitleWaveSpeed(Speed)
+                Cfg.TitleWaveSpeed = tonumber(Speed) or Cfg.TitleWaveSpeed
+            end
+
+            function Cfg:SetTitleWaveStyle(Style)
+                Cfg.TitleWaveStyle = tostring(Style)
+                BuildTitleWaveSequence()
             end
 
             Items.MobileFrame = Library:Create( "Frame", {
