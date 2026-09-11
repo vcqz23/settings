@@ -271,21 +271,25 @@ getgenv().Library = {
         return self
     end
 
+    -- Keep the intended transparency when parent/child fades overlap.
+    local FadeStates = setmetatable({}, {__mode = "k"})
     Library.Fade = function(self, obj, prop, vis)
-        if not (prop and obj) then
-            return
-        end
-
-        local OldTransparency = obj[prop]
-        obj[prop] = vis and 1 or OldTransparency
-
-        local Animation = Library:Tween({[prop] = vis and OldTransparency or 1}, nil, obj)
+        if not (prop and obj) then return end
+        local States = FadeStates[obj]
+        if not States then States = {}; FadeStates[obj] = States end
+        local Previous = States[prop]
+        local Overlapping = Previous and Previous.Active
+        local Original = Overlapping and Previous.Original or obj[prop]
+        local State = {Original = Original, Active = true}
+        -- Install before Tween: playing it may cancel the previous animation.
+        States[prop] = State
+        if vis and not Overlapping then obj[prop] = 1 end
+        local Animation = Library:Tween({[prop] = vis and Original or 1}, nil, obj)
         Library:Connect(Animation.Completed, function()
-            if not vis then
-                obj[prop] = OldTransparency
-            end
+            if States[prop] ~= State then return end
+            State.Active = false
+            if not vis then obj[prop] = Original end
         end)
-
         return Animation
     end
 
@@ -3188,19 +3192,25 @@ getgenv().Library = {
         end
 
         Cfg.NewKey = function()
-            task.wait()
+            if Library.ActiveKeyPicker == Cfg then
+                return
+            end
+
+            local previous = Library.ActiveKeyPicker
+            if previous then
+                previous.Binding = false
+                previous.Items.Value.Instance.Text = previous.BindingText
+            end
+
+            Library.ActiveKeyPicker = Cfg
+            Cfg.BindingText = Items.Value.Instance.Text
+            Cfg.Binding = false
             Items.Value.Instance.Text = "..."
-
-            Cfg.Binding = Library:Connect(Services.UserInputService.InputBegan, function(keycode, game_event)
-                if game_event then
-                    return
-                end
-
-                Cfg.Set(keycode.KeyCode ~= Enum.KeyCode.Unknown and keycode.KeyCode or keycode.UserInputType)
-
-                Cfg.Binding.Connection:Disconnect()
-                Cfg.Binding = nil
-            end)
+            -- Let the click that opened the picker finish before accepting input.
+            task.wait()
+            if Library.ActiveKeyPicker == Cfg then
+                Cfg.Binding = true
+            end
         end
 
         Cfg.SetVisible = function(bool)
@@ -3237,6 +3247,37 @@ getgenv().Library = {
         end)
 
         Library:Connect(Services.UserInputService.InputBegan, function(input, game_event)
+            if Library.KeyPickerConsumedInput == input then
+                return
+            end
+
+            if Library.ActiveKeyPicker then
+                if Library.ActiveKeyPicker ~= Cfg or not Cfg.Binding or game_event then
+                    return
+                end
+
+                local inputType = input.UserInputType
+                if inputType ~= Enum.UserInputType.Keyboard
+                    and inputType ~= Enum.UserInputType.MouseButton1
+                    and inputType ~= Enum.UserInputType.MouseButton2
+                    and inputType ~= Enum.UserInputType.MouseButton3 then
+                    return
+                end
+
+                local selected = inputType == Enum.UserInputType.Keyboard and input.KeyCode or inputType
+                if selected == Enum.KeyCode.Unknown then
+                    return
+                end
+
+                -- Finish capture before invoking user callbacks, which may yield or error.
+                Library.KeyPickerConsumedInput = input
+                Library.ActiveKeyPicker = nil
+                Cfg.Binding = false
+                Items.Value.Instance.Text = Cfg.BindingText
+                Cfg.Set(selected)
+                return
+            end
+
             if game_event then
                 return
             end
