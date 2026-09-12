@@ -29,15 +29,15 @@ local Library = {
 
     HudRegistry = {};
 
-    FontColor = Color3.fromRGB(235, 237, 241);
-    MainColor = Color3.fromRGB(24, 25, 29);
-    BackgroundColor = Color3.fromRGB(17, 18, 21);
-    AccentColor = Color3.fromRGB(180, 191, 212);
-    OutlineColor = Color3.fromRGB(48, 51, 59);
+    FontColor = Color3.fromRGB(224, 224, 224);
+    MainColor = Color3.fromRGB(25, 25, 25);
+    BackgroundColor = Color3.fromRGB(18, 18, 18);
+    AccentColor = Color3.fromRGB(190, 190, 190);
+    OutlineColor = Color3.fromRGB(49, 49, 49);
     RiskColor = Color3.fromRGB(255, 50, 50),
 
     Black = Color3.new(0, 0, 0);
-    Font = Enum.Font.Gotham,
+    Font = Enum.Font.Code,
 
     OpenedFrames = {};
     DependencyBoxes = {};
@@ -1860,8 +1860,8 @@ do
             BorderColor3 = 'OutlineColor';
         });
 
-        Library:StyleSurface(ToggleOuter, 3, false);
-        Library:StyleSurface(ToggleInner, 3, true);
+        Library:StyleSurface(ToggleOuter, 1, false);
+        Library:StyleSurface(ToggleInner, 1, true);
         local ToggleLabel = Library:CreateLabel({
             Size = UDim2.new(0, 216, 1, 0);
             Position = UDim2.new(1, 6, 0, 0);
@@ -2977,7 +2977,7 @@ function Library:CreateWindow(...)
         Parent = ScreenGui;
     });
 
-    Library:StyleSurface(Outer, 12, true);
+    Library:StyleSurface(Outer, 3, true);
     Library:MakeDraggable(Outer, 38);
 
     local Inner = Library:Create('Frame', {
@@ -2995,11 +2995,11 @@ function Library:CreateWindow(...)
         BorderColor3 = 'AccentColor';
     });
 
-    Library:StyleSurface(Inner, 11, false);
+    Library:StyleSurface(Inner, 2, false);
     local WindowLabel = Library:CreateLabel({
         Position = UDim2.new(0, 14, 0, 0);
         Size = UDim2.new(0, 0, 0, 38);
-        Font = Enum.Font.GothamMedium;
+        Font = Library.Font;
         TextSize = 16;
         Text = Config.Title or '';
         TextXAlignment = Enum.TextXAlignment.Left;
@@ -3035,8 +3035,8 @@ function Library:CreateWindow(...)
         BackgroundColor3 = 'BackgroundColor';
     });
 
-    Library:StyleSurface(MainSectionOuter, 8, false);
-    Library:StyleSurface(MainSectionInner, 8, false);
+    Library:StyleSurface(MainSectionOuter, 1, false);
+    Library:StyleSurface(MainSectionInner, 1, false);
     local TabArea = Library:Create('Frame', {
         BackgroundTransparency = 1;
         Position = UDim2.new(0, 8, 0, 8);
@@ -3071,7 +3071,7 @@ function Library:CreateWindow(...)
         WindowLabel.Text = Title;
     end;
 
-    Library:StyleSurface(TabContainer, 7, false);
+    Library:StyleSurface(TabContainer, 1, false);
 
     function Window:AddTab(Name)
         local Tab = {
@@ -3094,7 +3094,7 @@ function Library:CreateWindow(...)
             BorderColor3 = 'OutlineColor';
         });
 
-        Library:StyleSurface(TabButton, 5, false);
+        Library:StyleSurface(TabButton, 1, false);
         local TabButtonLabel = Library:CreateLabel({
             Position = UDim2.new(0, 0, 0, 0);
             Size = UDim2.new(1, 0, 1, -1);
@@ -3229,8 +3229,8 @@ function Library:CreateWindow(...)
                 BackgroundColor3 = 'BackgroundColor';
             });
 
-            Library:StyleSurface(BoxOuter, 7, true);
-            Library:StyleSurface(BoxInner, 6, false);
+            Library:StyleSurface(BoxOuter, 2, true);
+            Library:StyleSurface(BoxInner, 1, false);
             local Highlight = Library:Create('Frame', {
                 BackgroundColor3 = Library.AccentColor;
                 BorderSizePixel = 0;
@@ -3247,7 +3247,7 @@ function Library:CreateWindow(...)
             local GroupboxLabel = Library:CreateLabel({
                 Size = UDim2.new(1, -20, 0, 20);
                 Position = UDim2.new(0, 10, 0, 4);
-                Font = Enum.Font.GothamMedium;
+                Font = Library.Font;
                 TextSize = 14;
                 Text = Info.Name;
                 TextXAlignment = Enum.TextXAlignment.Left;
