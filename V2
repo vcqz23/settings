@@ -1750,11 +1750,18 @@ getgenv().Library = {
             Cfg.Size = Vector2.new(AbsoluteSize.X, AbsoluteSize.Y)
         end)
 
-        Items.Watermark = Library:Create("CanvasGroup",{Parent = Library.HUD.Instance; Position = UDim2.new(0, 30, 0, 200); BorderSizePixel = 0; AutomaticSize = Enum.AutomaticSize.XY; BackgroundColor3 = Color3.fromRGB(12, 12, 14)}):Draggify()
+        -- Leave extra horizontal space for the Roblox menu controls.
+        Items.Watermark = Library:Create("CanvasGroup",{Parent = Library.HUD.Instance; Position = UDim2.fromOffset(240, 18); BorderSizePixel = 0; AutomaticSize = Enum.AutomaticSize.XY; BackgroundColor3 = Color3.fromRGB(12, 12, 14)}):Draggify()
         Items.Title = Library:Create("TextLabel",{LayoutOrder = 1; TextColor3 = Color3.fromRGB(245, 245, 245); Text = Cfg.Text; Parent = Items.Watermark.Instance; BackgroundTransparency = 1; BorderSizePixel = 0; AutomaticSize = Enum.AutomaticSize.XY; BackgroundColor3 = Color3.fromRGB(255, 255, 255)})
         Items.UIPadding = Library:Create("UIPadding",{PaddingTop = UDim.new(0, 5); PaddingBottom = UDim.new(0, 7); Parent = Items.Title.Instance; PaddingRight = UDim.new(0, 8); PaddingLeft = UDim.new(0, 8)})
         Items.UIPadding = Library:Create("UIPadding",{PaddingTop = UDim.new(0, 2); PaddingBottom = UDim.new(0, 2); Parent = Items.Watermark.Instance; PaddingRight = UDim.new(0, 2); PaddingLeft = UDim.new(0, 2)})
         Items.UICorner = Library:Create("UICorner",{Parent = Items.Watermark.Instance})
+
+        Items.Title.Instance.TextColor3 = Color3.new(1, 1, 1)
+        local watermarkGradient = Instance.new("UIGradient")
+        watermarkGradient.Name = "WatermarkWave"
+        watermarkGradient.Parent = Items.Title.Instance
+        local watermarkAccent
 
 
         local AbsoluteSize = Items.Menu.Instance.AbsoluteSize
@@ -1763,9 +1770,22 @@ getgenv().Library = {
         local Frames = 0
         local FPS = 0
         local LastTick = tick()
-        Services.RunService.RenderStepped:Connect(function()
+        Library:Connect(Services.RunService.RenderStepped, function()
             Frames += 1
             local Tick = tick()
+
+            if watermarkAccent ~= Themes.Preset.Accent then
+                watermarkAccent = Themes.Preset.Accent
+                -- Color A stays white; only Color B follows the current accent.
+                watermarkGradient.Color = ColorSequence.new({
+                    ColorSequenceKeypoint.new(0, Color3.new(1, 1, 1)),
+                    ColorSequenceKeypoint.new(.5, watermarkAccent),
+                    ColorSequenceKeypoint.new(1, Color3.new(1, 1, 1))
+                })
+            end
+            if Items.Watermark.Instance.Visible then
+                watermarkGradient.Offset = Vector2.new(math.sin(Tick * 2) * .75, 0)
+            end
 
             if Tick - LastTick >= 1 then
                 FPS = Frames
@@ -3903,7 +3923,7 @@ getgenv().Library = {
         Section:AddKeyPicker({Text = "Menu bind", Mode = "Toggle", ShowInList = false, Callback = function(Value)
             Window.SetVisible(Value)
         end})
-        Section:AddToggle({Text = "Watermark", Callback = function(Bool)
+        Section:AddToggle({Text = "Watermark", Default = true, Callback = function(Bool)
             self.Window.Items.Watermark.Instance.Visible = Bool
         end})
         Section:AddToggle({Text = "Mod List", Callback = function(Bool)
