@@ -3323,6 +3323,128 @@ function Library:CreateWindow(...)
             return Tab:AddGroupbox({ Side = 2; Name = Name; });
         end;
 
+        function Tab:AddFullGroupbox(Name)
+            local Groupbox = {};
+
+            local FullSide = Library:Create('ScrollingFrame', {
+                BackgroundTransparency = 1;
+                BorderSizePixel = 0;
+                Position = UDim2.new(0, 8 - 1, 0, 8 - 1);
+                Size = UDim2.new(1, -16 + 2, 1, -14);
+                CanvasSize = UDim2.new(0, 0, 0, 0);
+                BottomImage = '';
+                TopImage = '';
+                ScrollBarThickness = 0;
+                ZIndex = 2;
+                Parent = TabFrame;
+            });
+
+            Library:Create('UIListLayout', {
+                Padding = UDim.new(0, 8);
+                FillDirection = Enum.FillDirection.Vertical;
+                SortOrder = Enum.SortOrder.LayoutOrder;
+                HorizontalAlignment = Enum.HorizontalAlignment.Center;
+                Parent = FullSide;
+            });
+
+            FullSide:WaitForChild('UIListLayout'):GetPropertyChangedSignal('AbsoluteContentSize'):Connect(function()
+                FullSide.CanvasSize = UDim2.fromOffset(0, FullSide.UIListLayout.AbsoluteContentSize.Y);
+            end);
+
+            local BoxOuter = Library:Create('Frame', {
+                BackgroundColor3 = Library.BackgroundColor;
+                BorderColor3 = Library.OutlineColor;
+                BorderMode = Enum.BorderMode.Inset;
+                Size = UDim2.new(1, 0, 0, 507 + 2);
+                ZIndex = 2;
+                Parent = FullSide;
+            });
+
+            Library:AddToRegistry(BoxOuter, {
+                BackgroundColor3 = 'BackgroundColor';
+                BorderColor3 = 'OutlineColor';
+            });
+
+            local BoxInner = Library:Create('Frame', {
+                BackgroundColor3 = Library.BackgroundColor;
+                BorderColor3 = Color3.new(0, 0, 0);
+                Size = UDim2.new(1, -2, 1, -2);
+                Position = UDim2.new(0, 1, 0, 1);
+                ZIndex = 4;
+                Parent = BoxOuter;
+            });
+
+            Library:AddToRegistry(BoxInner, {
+                BackgroundColor3 = 'BackgroundColor';
+            });
+
+            local Highlight = Library:Create('Frame', {
+                BackgroundColor3 = Library.AccentColor;
+                BorderSizePixel = 0;
+                Size = UDim2.new(1, 0, 0, 2);
+                ZIndex = 5;
+                Parent = BoxInner;
+            });
+
+            local Header = Library:CreateLabel({
+                Position = UDim2.new(0, 8, 0, 8);
+                Size = UDim2.new(1, -16, 0, 18);
+                Text = Name;
+                TextXAlignment = Enum.TextXAlignment.Left;
+                ZIndex = 6;
+                Parent = BoxInner;
+            });
+
+            local Container = Library:Create('ScrollingFrame', {
+                BackgroundTransparency = 1;
+                BorderSizePixel = 0;
+                Position = UDim2.new(0, 8, 0, 30);
+                Size = UDim2.new(1, -16, 1, -32);
+                CanvasSize = UDim2.new(0, 0, 0, 0);
+                BottomImage = '';
+                TopImage = '';
+                ScrollBarThickness = 0;
+                ZIndex = 4;
+                Parent = BoxInner;
+            });
+
+            Library:Create('UIListLayout', {
+                Padding = UDim.new(0, 4);
+                FillDirection = Enum.FillDirection.Vertical;
+                SortOrder = Enum.SortOrder.LayoutOrder;
+                Parent = Container;
+            });
+
+            Library:Create('UIListLayout', {
+                Padding = UDim.new(0, 4);
+                FillDirection = Enum.FillDirection.Vertical;
+                SortOrder = Enum.SortOrder.LayoutOrder;
+                Parent = Container;
+            });
+
+            function Groupbox:Resize()
+                local Size = 0;
+
+                for _, Element in next, Container:GetChildren() do
+                    if (not Element:IsA('UIListLayout')) and Element.Visible then
+                        Size = Size + Element.Size.Y.Offset;
+                    end;
+                end;
+
+                BoxOuter.Size = UDim2.new(1, 0, 0, 34 + Size + 6);
+            end;
+
+            Groupbox.Container = Container;
+            setmetatable(Groupbox, BaseGroupbox);
+
+            Groupbox:AddBlank(3);
+            Groupbox:Resize();
+
+            Tab.Groupboxes[Name] = Groupbox;
+
+            return Groupbox;
+        end;
+
         function Tab:AddTabbox(Info)
             local Tabbox = {
                 Tabs = {};
